@@ -409,7 +409,7 @@ export class TextProcessing {
         if (style.isOutlined) {
             outlineWidth = style.outlineWidth;
             top = bottom = left = right = outlineWidth;
-            contentSizeExtend.width = contentSizeExtend.height = outlineWidth * 2;
+            // contentSizeExtend.width = contentSizeExtend.height = outlineWidth * 2;
         }
         if (style.hasShadow) {
             const shadowWidth = style.shadowBlur + outlineWidth;
@@ -424,12 +424,13 @@ export class TextProcessing {
             // 0.0174532925 = 3.141592653 / 180
             const offset = style.fontSize * Math.tan(12 * 0.0174532925);
             right += offset;
-            contentSizeExtend.width += offset;
+            // contentSizeExtend.width += offset;
         }
+
         canvasPadding.x = left;
         canvasPadding.y = top;
-        canvasPadding.width = left + right;
-        canvasPadding.height = top + bottom;
+        contentSizeExtend.width = canvasPadding.width = left + right;
+        contentSizeExtend.height = canvasPadding.height = top + bottom;
     }
 
     // -------------------- String Processing Part --------------------------
