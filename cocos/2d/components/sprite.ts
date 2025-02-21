@@ -34,6 +34,7 @@ import { PixelFormat } from '../../asset/assets/asset-enum';
 import { TextureBase } from '../../asset/assets/texture-base';
 import { Material, RenderTexture } from '../../asset/assets';
 import { NodeEventType } from '../../scene-graph/node-event';
+import type { RenderData } from '../renderer/render-data';
 
 /**
  * @en
@@ -180,7 +181,6 @@ export class Sprite extends UIRenderer {
      */
     @type(SpriteAtlas)
     @displayOrder(4)
-    @tooltip('i18n:sprite.atlas')
     get spriteAtlas (): SpriteAtlas | null {
         return this._atlas;
     }
@@ -200,7 +200,6 @@ export class Sprite extends UIRenderer {
      */
     @type(SpriteFrame)
     @displayOrder(5)
-    @tooltip('i18n:sprite.sprite_frame')
     get spriteFrame (): SpriteFrame | null {
         return this._spriteFrame;
     }
@@ -233,7 +232,6 @@ export class Sprite extends UIRenderer {
      */
     @type(SpriteType)
     @displayOrder(6)
-    @tooltip('i18n:sprite.type')
     get type (): SpriteType {
         return this._type;
     }
@@ -373,7 +371,6 @@ export class Sprite extends UIRenderer {
         return this._type === SpriteType.SIMPLE;
     })
     @displayOrder(8)
-    @tooltip('i18n:sprite.trim')
     get trim (): boolean {
         return this._isTrimmedMode;
     }
@@ -396,7 +393,6 @@ export class Sprite extends UIRenderer {
      */
     @editable
     @displayOrder(5)
-    @tooltip('i18n:sprite.gray_scale')
     get grayscale (): boolean {
         return this._useGrayscale;
     }
@@ -424,7 +420,6 @@ export class Sprite extends UIRenderer {
      */
     @type(SizeMode)
     @displayOrder(5)
-    @tooltip('i18n:sprite.size_mode')
     get sizeMode (): SizeMode {
         return this._sizeMode;
     }
@@ -604,11 +599,11 @@ export class Sprite extends UIRenderer {
 
         if (!self._renderData) {
             if (assembler && assembler.createData) {
-                const rd = self._renderData = assembler.createData(self);
+                const rd = self._renderData = assembler.createData(self) as RenderData;
                 rd.material = self.getRenderMaterial(0);
                 self._markForUpdateRenderData();
                 if (self.spriteFrame) {
-                    assembler.updateUVs(self);
+                    assembler.updateUVs!(self);
                 }
                 self._updateColor();
             }
@@ -683,7 +678,7 @@ export class Sprite extends UIRenderer {
 
     private _updateUVs (): void {
         if (this._assembler) {
-            this._assembler.updateUVs(this);
+            this._assembler.updateUVs!(this);
         }
     }
 

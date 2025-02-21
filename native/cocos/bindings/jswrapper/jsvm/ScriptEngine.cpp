@@ -56,7 +56,7 @@ se::Value __oldConsoleWarn;
 se::Value __oldConsoleError;
 se::Value __oldConsoleAssert;
 
-bool JSB_console_format_log(State& s, const char* prefix, int msgIndex = 0) {
+bool JSB_console_format_log(State& s, cc::LogLevel level, int msgIndex = 0) {
     if (msgIndex < 0)
         return false;
 
@@ -64,7 +64,7 @@ bool JSB_console_format_log(State& s, const char* prefix, int msgIndex = 0) {
     int argc = (int)args.size();
     if ((argc - msgIndex) == 1) {
         std::string msg = args[msgIndex].toStringForce();
-        SE_LOGD("JS: %{public}s%{public}s\n", prefix, msg.c_str());
+        cc::Log::logMessage(cc::LogType::KERNEL, level, "JS: %s", msg.c_str());
     } else if (argc > 1) {
         std::string msg = args[msgIndex].toStringForce();
         size_t pos;
@@ -77,13 +77,13 @@ bool JSB_console_format_log(State& s, const char* prefix, int msgIndex = 0) {
                     msg += " " + args[i].toStringForce();
                 }
         }
-        SE_LOGD("JS: %{public}s%{public}s\n", prefix, msg.c_str());
+        cc::Log::logMessage(cc::LogType::KERNEL, level, "JS: %s", msg.c_str());
     }
     return true;
 }
 
 bool JSB_console_log(State& s) {
-    JSB_console_format_log(s, "");
+    JSB_console_format_log(s, cc::LogLevel::LEVEL_DEBUG);
     __oldConsoleLog.toObject()->call(s.args(), s.thisObject());
     return true;
 }
@@ -91,7 +91,7 @@ bool JSB_console_log(State& s) {
 SE_BIND_FUNC(JSB_console_log)
 
 bool JSB_console_debug(State& s) {
-    JSB_console_format_log(s, "[DEBUG]: ");
+    JSB_console_format_log(s, cc::LogLevel::LEVEL_DEBUG);
     __oldConsoleDebug.toObject()->call(s.args(), s.thisObject());
     return true;
 }
@@ -99,7 +99,7 @@ bool JSB_console_debug(State& s) {
 SE_BIND_FUNC(JSB_console_debug)
 
 bool JSB_console_info(State& s) {
-    JSB_console_format_log(s, "[INFO]: ");
+    JSB_console_format_log(s, cc::LogLevel::INFO);
     __oldConsoleInfo.toObject()->call(s.args(), s.thisObject());
     return true;
 }
@@ -107,7 +107,7 @@ bool JSB_console_info(State& s) {
 SE_BIND_FUNC(JSB_console_info)
 
 bool JSB_console_warn(State& s) {
-    JSB_console_format_log(s, "[WARN]: ");
+    JSB_console_format_log(s, cc::LogLevel::WARN);
     __oldConsoleWarn.toObject()->call(s.args(), s.thisObject());
     return true;
 }
@@ -115,7 +115,7 @@ bool JSB_console_warn(State& s) {
 SE_BIND_FUNC(JSB_console_warn)
 
 bool JSB_console_error(State& s) {
-    JSB_console_format_log(s, "[ERROR]: ");
+    JSB_console_format_log(s, cc::LogLevel::ERR);
     __oldConsoleError.toObject()->call(s.args(), s.thisObject());
     return true;
 }
@@ -126,7 +126,7 @@ bool JSB_console_assert(State& s) {
     const auto& args = s.args();
     if (!args.empty()) {
         if (args[0].isBoolean() && !args[0].toBoolean()) {
-            JSB_console_format_log(s, "[ASSERT]: ", 1);
+            JSB_console_format_log(s, cc::LogLevel::WARN, 1);
             __oldConsoleAssert.toObject()->call(s.args(), s.thisObject());
         }
     }
@@ -138,17 +138,14 @@ SE_BIND_FUNC(JSB_console_assert)
 ScriptEngine *gSriptEngineInstance = nullptr;
 
 ScriptEngine::ScriptEngine() {
-    static bool initialized = false;
-    if (initialized) {
-        return;
-    }
-    JSVM_InitOptions initOptions;
-    memset(&initOptions, 0, sizeof(initOptions));
-    OH_JSVM_Init(&initOptions);
-    initialized = true;
+    OH_JSVM_Init(nullptr);
+    gSriptEngineInstance = this;
 };
 
-ScriptEngine::~ScriptEngine() = default;
+ScriptEngine::~ScriptEngine() {
+    cleanup();
+    gSriptEngineInstance = nullptr;
+};
 
 void ScriptEngine::setFileOperationDelegate(const FileOperationDelegate &delegate) {
     _fileOperationDelegate = delegate;
@@ -303,6 +300,21 @@ bool ScriptEngine::init() {
 
 Object *ScriptEngine::getGlobalObject() const { return _globalObj; }
     
+void ScriptEngine::closeEngine() {
+    JSVM_Env env = _env;
+    _env = nullptr;
+
+    JSVM_Status status;
+    NODE_API_CALL(status, env, OH_JSVM_CloseEnvScope(env, _envScope));
+    NODE_API_CALL(status, env, OH_JSVM_DestroyEnv(env));
+    NODE_API_CALL(status, env, OH_JSVM_CloseVMScope(_vm, _vmScope));
+    NODE_API_CALL(status, env, OH_JSVM_DestroyVM(_vm));
+    _envScope = nullptr;
+    env = nullptr;
+    _vmScope = nullptr;
+    _vm = nullptr;
+}
+
 bool ScriptEngine::start() {
     bool ok = true;
     if (!init()) {
@@ -337,8 +349,6 @@ void ScriptEngine::cleanup() {
     if (!_isValid) {
         return;
     }
-    Object::restarting = true;
-    Object::resetBaseSet();
     SE_LOGD("ScriptEngine::cleanup begin ...\n");
     _isInCleanup = true;
     se::AutoHandleScope hs;
@@ -360,20 +370,6 @@ void ScriptEngine::cleanup() {
     __oldConsoleWarn.setUndefined();
     __oldConsoleError.setUndefined();
     __oldConsoleAssert.setUndefined();
-
-    JSVM_Env env = _env;
-    _env = nullptr;
-
-    JSVM_Status status;
-    NODE_API_CALL(status, env, OH_JSVM_CloseEnvScope(env, _envScope));
-
-    NODE_API_CALL(status, env, OH_JSVM_DestroyEnv(env));
-    NODE_API_CALL(status, env, OH_JSVM_CloseVMScope(_vm, _vmScope));
-    NODE_API_CALL(status, env, OH_JSVM_DestroyVM(_vm));
-    _envScope = nullptr;
-    env = nullptr;
-    _vmScope = nullptr;
-    _vm = nullptr;
 
     _globalObj = nullptr;
     _isValid   = false;

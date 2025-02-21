@@ -32,7 +32,7 @@ import { AttachUtil } from './AttachUtil';
 import { CCFactory } from './CCFactory';
 import { DragonBonesAsset } from './DragonBonesAsset';
 import { DragonBonesAtlasAsset } from './DragonBonesAtlasAsset';
-import { Graphics } from '../2d/components';
+import type { Graphics } from '../2d/components/graphics';
 import { CCArmatureDisplay } from './CCArmatureDisplay';
 import { MaterialInstance } from '../render-scene/core/material-instance';
 import { ArmatureSystem } from './ArmatureSystem';
@@ -43,6 +43,7 @@ import { Material, Texture2D } from '../asset/assets';
 import { Node } from '../scene-graph';
 import { builtinResMgr } from '../asset/asset-manager';
 import { setPropertyEnumType } from '../core/internal-index';
+import type { RenderData } from '../2d/renderer/render-data';
 
 enum DefaultArmaturesEnum {
     default = -1,
@@ -582,7 +583,7 @@ export class ArmatureDisplay extends UIRenderer {
     */
     public maxIndexCount = 0;
 
-    protected _materialCache: { [key: string]: MaterialInstance } = {} as any;
+    protected _materialCache: { [key: string]: MaterialInstance } = {};
 
     protected _enumArmatures: any = Enum({});
     protected _enumAnimations: any = Enum({});
@@ -711,11 +712,11 @@ export class ArmatureDisplay extends UIRenderer {
     /**
      * @engineInternal
      */
-    public updateMaterial (): void {
-        let mat;
+    public override updateMaterial (): void {
+        let mat: Material;
         if (this._customMaterial) mat = this._customMaterial;
         else mat = this._updateBuiltinMaterial();
-        this.setSharedMaterial(mat as Material, 0);
+        this.setSharedMaterial(mat, 0);
         this._cleanMaterialCache();
     }
 
@@ -996,16 +997,22 @@ export class ArmatureDisplay extends UIRenderer {
     _updateDebugDraw (): void {
         if (this.debugBones) {
             if (!this._debugDraw) {
-                const debugDrawNode = new Node('DEBUG_DRAW_NODE');
+                let debugDrawNode: Node | null = new Node('DEBUG_DRAW_NODE');
                 debugDrawNode.hideFlags |= CCObjectFlags.DontSave | CCObjectFlags.HideInHierarchy;
-                const debugDraw = debugDrawNode.addComponent(Graphics);
-                debugDraw.lineWidth = 1;
-                debugDraw.strokeColor = new Color(255, 0, 0, 255);
+                let debugDraw: Graphics | undefined;
+                try {
+                    debugDraw = debugDrawNode.addComponent('cc.Graphics') as Graphics;
+                    debugDraw.lineWidth = 1;
+                    debugDraw.strokeColor = new Color(255, 0, 0, 255);
 
-                this._debugDraw = debugDraw;
+                    this._debugDraw = debugDraw;
+                    this._debugDraw.node.parent = this.node;
+                } catch (e: any) {
+                    errorID(4501, e.message as string);
+                    debugDrawNode.destroy();
+                    debugDrawNode = null;
+                }
             }
-
-            this._debugDraw.node.parent = this.node;
         } else if (this._debugDraw) {
             this._debugDraw.node.parent = null;
         }
@@ -1469,7 +1476,7 @@ export class ArmatureDisplay extends UIRenderer {
             this._assembler = assembler;
         }
         if (this._armature && this._assembler) {
-            this._renderData = this._assembler.createData(this);
+            this._renderData = this._assembler.createData!(this) as RenderData;
             if (this._renderData) {
                 this.maxVertexCount = this._renderData.vertexCount;
                 this.maxIndexCount = this._renderData.indexCount;

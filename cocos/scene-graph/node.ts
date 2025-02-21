@@ -23,7 +23,7 @@
 */
 
 import { ccclass, editable, serializable, type } from 'cc.decorator';
-import { DEV, DEBUG, EDITOR, EDITOR_NOT_IN_PREVIEW } from 'internal:constants';
+import { DEV, DEBUG, EDITOR, EDITOR_NOT_IN_PREVIEW, USE_UI_SKEW } from 'internal:constants';
 import { Layers } from './layers';
 import { NodeUIProperties } from './node-ui-properties';
 import { cclegacy } from '../core/global-exports';
@@ -45,7 +45,8 @@ import { findSkewAndGetOriginalWorldMatrix, updateLocalMatrixBySkew } from '../2
 import type { Scene } from './scene';
 import type { Director } from '../game/director';
 import type { Game } from '../game/game';
-import type { UITransform, UISkew } from '../2d/framework';
+import type { UITransform } from '../2d/framework';
+import type { UISkew } from '../2d/framework/ui-skew';
 
 const Destroying = CCObjectFlags.Destroying;
 const DontDestroy = CCObjectFlags.DontDestroy;
@@ -82,9 +83,6 @@ const dirtyNodes: Node[] = [];
 
 const reserveContentsForAllSyncablePrefabTag = Symbol('ReserveContentsForAllSyncablePrefab');
 let globalFlagChangeVersion = 0;
-
-// TODO: Make this configurable in cc.config.json
-const HAS_UI_SKEW = true;
 
 let skewCompCount = 0;
 
@@ -864,20 +862,36 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
     public getComponent<T extends Component>(classConstructor: Constructor<T> | AbstractedConstructor<T>): T | null;
 
     /**
-      * @en
-      * Returns the component of supplied type if the node has one attached, null if it doesn't.
-      * You can also get component in the node by passing in the name of the script.
-      * @zh
-      * 获取节点上指定类型的组件，如果节点有附加指定类型的组件，则返回，如果没有则为空。
-      * 传入参数也可以是脚本的名称。
-      * @param className The class name of the target component
-      * @example
-      * ```
-      * // get custom test class.
-      * var test = node.getComponent("Test");
-      * ```
-      */
+     * @en
+     * Returns the component of supplied type if the node has one attached, null if it doesn't.
+     * You can also get component in the node by passing in the name of the script.
+     * @zh
+     * 获取节点上指定类型的组件，如果节点有附加指定类型的组件，则返回，如果没有则为空。
+     * 传入参数也可以是脚本的名称。
+     * @param className The class name of the target component
+     * @example
+     * ```
+     * // get custom test class.
+     * var test = node.getComponent("Test") as Test | null;
+     * ```
+     */
     public getComponent(className: string): Component | null;
+
+    /**
+     * @en
+     * Returns the component of supplied type if the node has one attached, null if it doesn't.
+     * You can also get component in the node by passing in the name of the script.
+     * @zh
+     * 获取节点上指定类型的组件，如果节点有附加指定类型的组件，则返回，如果没有则为空。
+     * 传入参数也可以是脚本的名称。
+     * @param className The class name of the target component
+     * @example
+     * ```
+     * // get custom test class.
+     * var test = node.getComponent<Test>("Test");
+     * ```
+     */
+    public getComponent<T extends Component>(className: string): T | null;
 
     public getComponent<T extends Component> (typeOrClassName: string | Constructor<T> | AbstractedConstructor<T>): T | null {
         const constructor = getConstructor(typeOrClassName);
@@ -898,12 +912,27 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
      * @en Returns all components of given type in the node.
      * @zh 返回节点上指定类型的所有组件。
      * @param className The class name of the target component
+     * @example
+     * ```
+     * var test = node.getComponents('Test') as Test[];
+     * ```
      */
     public getComponents(className: string): Component[];
 
-    public getComponents<T extends Component> (typeOrClassName: string | Constructor<T> | AbstractedConstructor<T>): Component[] {
+    /**
+     * @en Returns all components of given type in the node.
+     * @zh 返回节点上指定类型的所有组件。
+     * @param className The class name of the target component
+     * @example
+     * ```
+     * var test = node.getComponents<Test>('Test');
+     * ```
+     */
+    public getComponents<T extends Component>(className: string): T[];
+
+    public getComponents<T extends Component> (typeOrClassName: string | Constructor<T> | AbstractedConstructor<T>): T[] {
         const constructor = getConstructor(typeOrClassName);
-        const components: Component[] = [];
+        const components: T[] = [];
         if (constructor) {
             Node._findComponents(this, constructor, components);
         }
@@ -927,10 +956,21 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
      * @param className The class name of the target component
      * @example
      * ```
-     * var Test = node.getComponentInChildren("Test");
+     * var test = node.getComponentInChildren("Test") as Test | null;
      * ```
      */
     public getComponentInChildren(className: string): Component | null;
+
+    /**
+     * @en Returns the component of given type in any of its children using depth first search.
+     * @zh 递归查找所有子节点中第一个匹配指定类型的组件。
+     * @param className The class name of the target component
+     * @example
+     * ```
+     * var test = node.getComponentInChildren<Test>("Test");
+     * ```
+     */
+    public getComponentInChildren<T extends Component>(className: string): T | null;
 
     public getComponentInChildren<T extends Component> (typeOrClassName: string | Constructor<T> | AbstractedConstructor<T>): T | null {
         const constructor = getConstructor(typeOrClassName);
@@ -957,14 +997,25 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
      * @param className The class name of the target component
      * @example
      * ```
-     * var tests = node.getComponentsInChildren("Test");
+     * var tests = node.getComponentsInChildren("Test") as Test[];
      * ```
      */
     public getComponentsInChildren(className: string): Component[];
 
-    public getComponentsInChildren<T extends Component> (typeOrClassName: string | Constructor<T> | AbstractedConstructor<T>): Component[] {
+    /**
+     * @en Returns all components of given type in self or any of its children.
+     * @zh 递归查找自身或所有子节点中指定类型的组件
+     * @param className The class name of the target component
+     * @example
+     * ```
+     * var tests = node.getComponentsInChildren<Test>("Test");
+     * ```
+     */
+    public getComponentsInChildren<T extends Component>(className: string): T[];
+
+    public getComponentsInChildren<T extends Component> (typeOrClassName: string | Constructor<T> | AbstractedConstructor<T>): T[] {
         const constructor = getConstructor(typeOrClassName);
-        const components: Component[] = [];
+        const components: T[] = [];
         if (constructor) {
             Node._findComponents(this, constructor, components);
             Node._findChildComponents(this._children, constructor, components);
@@ -991,10 +1042,22 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
      * @throws `TypeError` if the `className` does not specify a cc-class constructor extending the `Component`.
      * @example
      * ```
-     * var test = node.addComponent("Test");
+     * var test = node.addComponent("Test") as Test;
      * ```
      */
     public addComponent(className: string): Component;
+
+    /**
+     * @en Adds a component class to the node. You can also add component to node by passing in the name of the script.
+     * @zh 向节点添加一个指定类型的组件类，你还可以通过传入脚本的名称来添加组件。
+     * @param className The class name of the component to add
+     * @throws `TypeError` if the `className` does not specify a cc-class constructor extending the `Component`.
+     * @example
+     * ```
+     * var test = node.addComponent<Test>("Test");
+     * ```
+     */
+    public addComponent<T extends Component>(className: string): T;
 
     public addComponent<T extends Component> (typeOrClassName: string | Constructor<T>): T {
         if (EDITOR && (this._objFlags & Destroying)) {
@@ -2025,7 +2088,7 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
                     self.updateWorldTransform();
                 } else {
                     let newParentMatWithoutSkew = parent._mat;
-                    if (HAS_UI_SKEW) {
+                    if (USE_UI_SKEW) {
                         const hasSkew = skewCompCount > 0;
                         if (hasSkew) {
                             if (oldParent) {
@@ -2282,7 +2345,7 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
                 if (rotationScaleSkewDirty) {
                     let originalWorldMatrix = childMat;
                     Mat4.fromSRT(m4_1, child._lrot, child._lpos, child._lscale); // m4_1 stores local matrix
-                    if (HAS_UI_SKEW && skewCompCount > 0) {
+                    if (USE_UI_SKEW && skewCompCount > 0) {
                         foundSkewInAncestor = findSkewAndGetOriginalWorldMatrix(cur, m4_2); // m4_2 stores parent's world matrix without skew
                         uiSkewComp = child._uiProps._uiSkewComp;
                         if (uiSkewComp || foundSkewInAncestor) {
@@ -2300,7 +2363,7 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
                     const rotTmp = dirtyBits & TransformBit.ROTATION ? child._rot : null;
                     Mat4.toSRT(originalWorldMatrix, rotTmp, childPos, child._scale);
 
-                    if (HAS_UI_SKEW && foundSkewInAncestor) {
+                    if (USE_UI_SKEW && foundSkewInAncestor) {
                         // NOTE: world position from Mat4.toSRT(originalWorldMatrix, ...) will not consider the skew factor.
                         // So we need to update the world position manually here.
                         Vec3.transformMat4(childPos, child._lpos, cur._mat);
@@ -2322,7 +2385,7 @@ export class Node extends CCObject implements ISchedulable, CustomSerializable {
                     }
                     Mat4.fromSRT(childMat, child._rot, child._pos, child._scale);
 
-                    if (HAS_UI_SKEW && skewCompCount > 0) {
+                    if (USE_UI_SKEW && skewCompCount > 0) {
                         uiSkewComp = child._uiProps._uiSkewComp;
                         if (uiSkewComp) {
                             updateLocalMatrixBySkew(uiSkewComp, childMat);
