@@ -26,7 +26,7 @@ jobs:
           EXT_VERSION=`node ./.github/workflows/get-native-external-version.js`
           git clone --branch $EXT_VERSION --depth 1 https://github.com/cocos/cocos-engine-external native/external
       - name: Install deps
-        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        uses: humbletim/setup-vulkan-sdk@523828e49cd4afabce369c39c7ee6543a2b7a735
         with:
           vulkan-query-version: 1.2.189.0
           vulkan-components: Vulkan-Headers, Vulkan-Loader
@@ -44,8 +44,6 @@ jobs:
           echo "set(CC_USE_GLES3 ON)" >> build-win64/proj/cfg.cmake
           echo "set(CC_USE_VULKAN ON)" >> build-win64/proj/cfg.cmake
           echo "set(CC_USE_GLES2 ON)" >> build-win64/proj/cfg.cmake
-          echo "set(USE_SPINE OFF)" >> build-win64/proj/cfg.cmake
-          echo "set(USE_DRAGONBONES OFF)" >> build-win64/proj/cfg.cmake
           echo "set(USE_WEBSOCKET_SERVER ON)" >> build-win64/proj/cfg.cmake
           echo "set(CMAKE_CXX_STANDARD_REQUIRED ON)" >> build-win64/proj/cfg.cmake
           echo "set(CC_EXECUTABLE_NAME \"\")" >> build-win64/proj/cfg.cmake
@@ -190,8 +188,11 @@ jobs:
           echo "set(CC_USE_GLES3 ON)" >> build-android/proj/cfg.cmake
           echo "set(CC_USE_VULKAN ON)" >> build-android/proj/cfg.cmake
           echo "set(CC_USE_GLES2 ON)" >> build-android/proj/cfg.cmake
+          echo "set(USE_BOX2D_JSB ON)" >> build-android/proj/cfg.cmake
           echo "set(USE_WEBSOCKET_SERVER ON)" >> build-android/proj/cfg.cmake
           echo "set(CMAKE_CXX_STANDARD_REQUIRED ON)" >> build-android/proj/cfg.cmake
+          echo "set(USE_SPINE_3_8 OFF)" >> build-android/proj/cfg.cmake
+          echo "set(USE_SPINE_4_2 ON)" >> build-android/proj/cfg.cmake
           echo "set(COCOS_X_PATH $NATIVE_ROOT)" >> build-android/proj/cfg.cmake
           echo "set(CC_EXECUTABLE_NAME \"\")" >> build-android/proj/cfg.cmake
 
@@ -427,6 +428,9 @@ jobs:
           echo "set(CC_USE_GLES2 OFF)" >> build-mac/proj/cfg.cmake
           echo "set(CC_USE_GLES3 OFF)" >> build-mac/proj/cfg.cmake
           echo "set(CC_USE_METAL ON)" >> build-mac/proj/cfg.cmake
+          # Test JSVM v8 backend on macOS.
+          echo "set(USE_SE_V8 OFF)" >> build-mac/proj/cfg.cmake
+          echo "set(USE_SE_JSVM ON)" >> build-mac/proj/cfg.cmake
           echo "set(USE_WEBSOCKET_SERVER OFF)" >> build-mac/proj/cfg.cmake
           echo "set(CMAKE_CXX_STANDARD_REQUIRED ON)" >> build-mac/proj/cfg.cmake
           echo "set(CC_EXECUTABLE_NAME \"\")" >> build-mac/proj/cfg.cmake

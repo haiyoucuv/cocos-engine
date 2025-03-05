@@ -38,6 +38,9 @@
             "label": "i18n:ENGINE.features.skeletal_animation.label",
             "description": "i18n:ENGINE.features.skeletal_animation.description",
             "default": true,
+            "dependencies": [
+                "animation"
+            ],
             "category": "animation"
         },
         "3d": {
@@ -209,11 +212,16 @@
                             "default": false
                         }
                     }
-
                 },
                 "physics-2d-builtin": {
                     "label": "i18n:ENGINE.features.physics_2d_builtin.label",
                     "description": "i18n:ENGINE.features.physics_2d_builtin.description"
+                },
+                "physics-2d-box2d-jsb": {
+                    "isNativeModule": true,
+                    "cmakeConfig": "USE_BOX2D_JSB",
+                    "label": "i18n:ENGINE.features.physics_2d_box2d_jsb.label",
+                    "description": "i18n:ENGINE.features.physics_2d_box2d_jsb.description"
                 }
             }
         },
@@ -369,22 +377,44 @@
             "hidden": true
         },
         "spine": {
-            "default": true,
             "label": "i18n:ENGINE.features.spine.label",
             "description": "i18n:ENGINE.features.spine.description",
-            "cmakeConfig": "USE_SPINE",
-            "isNativeModule": true,
-            "enginePlugin": true,
             "category": "2d",
             "dependencies": [
                 "2d"
             ],
-            "flags": {
-                "LOAD_SPINE_MANUALLY": {
-                    "label": "i18n:ENGINE.features.flags.spine.loadManual.label",
-                    "description": "i18n:ENGINE.features.flags.spine.loadManual.description",
-                    "ui-type": "checkbox",
-                    "default": false
+            "options": {
+                "spine-3.8": {
+                    "enginePlugin": true,
+                    "cmakeConfig": "USE_SPINE_3_8",
+                    "default": true,
+                    "isNativeModule": true,
+                    "label": "i18n:ENGINE.features.spine_38.label",
+                    "description": "i18n:ENGINE.features.spine_38.description",
+                    "flags": {
+                        "LOAD_SPINE_MANUALLY": {
+                            "label": "i18n:ENGINE.features.flags.spine.loadManual.label",
+                            "description": "i18n:ENGINE.features.flags.spine.loadManual.description",
+                            "ui-type": "checkbox",
+                            "default": false
+                        }
+                    }
+                },
+                "spine-4.2": {
+                    "enginePlugin": true,
+                    "cmakeConfig": "USE_SPINE_4_2",
+                    "default": false,
+                    "isNativeModule": true,
+                    "label": "i18n:ENGINE.features.spine_42.label",
+                    "description": "i18n:ENGINE.features.spine_42.description",
+                    "flags": {
+                        "LOAD_SPINE_MANUALLY": {
+                            "label": "i18n:ENGINE.features.flags.spine.loadManual.label",
+                            "description": "i18n:ENGINE.features.flags.spine.loadManual.description",
+                            "ui-type": "checkbox",
+                            "default": false
+                        }
+                    }
                 }
             }
         },
@@ -404,6 +434,9 @@
             "label": "i18n:ENGINE.features.marionette.label",
             "description": "i18n:ENGINE.features.marionette.description",
             "enginePlugin": false,
+            "dependencies": [
+                "animation"
+            ],
             "category": "animation"
         },
         "procedural-animation": {
@@ -411,6 +444,9 @@
             "label": "i18n:ENGINE.features.procedural_animation.label",
             "description": "i18n:ENGINE.features.procedural_animation.description",
             "enginePlugin": false,
+            "dependencies": [
+                "animation"
+            ],
             "category": "animation"
         },
         "custom-pipeline-post-process": {

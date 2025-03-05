@@ -21,7 +21,7 @@
 #include "bindings/auto/jsb_2d_auto.h"
 #include "bindings/auto/jsb_assets_auto.h"
 #include "bindings/auto/jsb_cocos_auto.h"
-#include "bindings/auto/jsb_spine_auto.h"
+#include "bindings/auto/jsb_spine_4_2_auto.h"
 using namespace spine;
 
 #define SWIGINTERN static
@@ -42,28 +42,27 @@ using namespace spine;
 //
 %ignore cc::RefCounted;
 %ignore *::rtti;
-%ignore spine::SkeletonCache::SegmentData;
-%ignore spine::SkeletonCache::BoneData;
-%ignore spine::SkeletonCache::FrameData;
-%ignore spine::SkeletonCache::AnimationData;
+%ignore cc::SkeletonCache::SegmentData;
+%ignore cc::SkeletonCache::BoneData;
+%ignore cc::SkeletonCache::FrameData;
+%ignore cc::SkeletonCache::AnimationData;
 %ignore spine::Skin::AttachmentMap::getEntries;
-%ignore spine::AttachmentLoader::getRTTI;
 
 %ignore spine::Polygon::Polygon;
 %ignore spine::Polygon::_vertices;
 
-%ignore spine::SkeletonRenderer::create;
-%ignore spine::SkeletonRenderer::initWithJsonFile;
-%ignore spine::SkeletonRenderer::initWithBinaryFile;
-%ignore spine::SkeletonRenderer::createWithData;
-%ignore spine::SkeletonRenderer::initWithData;
-%ignore spine::SkeletonRenderer::createWithSkeleton;
-%ignore spine::SkeletonRenderer::createWithFile;
-%ignore spine::SkeletonRenderer::requestDrawInfo;
-%ignore spine::SkeletonRenderer::requestMaterial;
-%ignore spine::SkeletonAnimation::createWithData;
-%ignore spine::SkeletonAnimation::onTrackEntryEvent;
-%ignore spine::SkeletonAnimation::onAnimationStateEvent;
+%ignore cc::SkeletonRenderer::create;
+%ignore cc::SkeletonRenderer::initWithJsonFile;
+%ignore cc::SkeletonRenderer::initWithBinaryFile;
+%ignore cc::SkeletonRenderer::createWithData;
+%ignore cc::SkeletonRenderer::initWithData;
+%ignore cc::SkeletonRenderer::createWithSkeleton;
+%ignore cc::SkeletonRenderer::createWithFile;
+%ignore cc::SkeletonRenderer::requestDrawInfo;
+%ignore cc::SkeletonRenderer::requestMaterial;
+%ignore cc::SkeletonAnimation::createWithData;
+%ignore cc::SkeletonAnimation::onTrackEntryEvent;
+%ignore cc::SkeletonAnimation::onAnimationStateEvent;
 %ignore spine::TrackEntry::setListener;
 %ignore spine::AnimationState::setListener;
 %ignore spine::Attachment::getRTTI;
@@ -81,7 +80,7 @@ using namespace spine;
 %ignore spine::EventTimeline::getRTTI;
 %ignore spine::IkConstraint::getRTTI;
 %ignore spine::IkConstraint::apply(Bone&, float, float, bool, bool, bool, float);
-%ignore spine::IkConstraint::apply(Bone&, Bone&, float, float, int, bool, float, float);
+%ignore spine::IkConstraint::apply(Bone&, Bone&, float, float, int, bool, bool, float, float);
 %ignore spine::IkConstraintTimeline::getRTTI;
 %ignore spine::MeshAttachment::getRTTI;
 %ignore spine::PathAttachment::getRTTI;
@@ -100,20 +99,19 @@ using namespace spine;
 %ignore spine::TransformConstraint::getRTTI;
 %ignore spine::TransformConstraintTimeline::getRTTI;
 %ignore spine::TranslateTimeline::getRTTI;
-%ignore spine::TwoColorTimeline::getRTTI;
 %ignore spine::VertexAttachment::getRTTI;
 %ignore spine::Interpolation::getRTTI;
 %ignore spine::VertexEffect::getRTTI;
 %ignore spine::ConstraintData::getRTTI;
 
-%ignore spine::SkeletonDataMgr::destroyInstance;
-%ignore spine::SkeletonDataMgr::hasSkeletonData;
-%ignore spine::SkeletonDataMgr::setSkeletonData;
-%ignore spine::SkeletonDataMgr::retainByUUID;
-%ignore spine::SkeletonDataMgr::releaseByUUID;
-%ignore spine::SkeletonCacheAnimation::render;
-%ignore spine::SkeletonCacheAnimation::requestDrawInfo;
-%ignore spine::SkeletonCacheAnimation::requestMaterial;
+%ignore cc::SkeletonDataMgr::destroyInstance;
+%ignore cc::SkeletonDataMgr::hasSkeletonData;
+%ignore cc::SkeletonDataMgr::setSkeletonData;
+%ignore cc::SkeletonDataMgr::retainByUUID;
+%ignore cc::SkeletonDataMgr::releaseByUUID;
+%ignore cc::SkeletonCacheAnimation::render;
+%ignore cc::SkeletonCacheAnimation::requestDrawInfo;
+%ignore cc::SkeletonCacheAnimation::requestMaterial;
 %ignore spine::Timeline::apply(Skeleton&, float, float, Vector<Event*>*, float, MixBlend, MixDirection);
 %ignore spine::AnimationState::apply(Skeleton&);
 %ignore spine::Animation::apply(Skeleton&, float, float, bool, Vector<Event*>*, float, MixBlend, MixDirection);
@@ -131,22 +129,11 @@ using namespace spine;
 %ignore spine::TransformConstraint::TransformConstraint(TransformConstraintData&, Skeleton&);
 %ignore spine::SkeletonBounds::update(Skeleton&, bool);
 %ignore spine::SlotData::SlotData(int, const String&, BoneData&);
-%ignore spine::SwirlVertexEffect::SwirlVertexEffect(float, Interpolation&);
-%ignore spine::SwirlVertexEffect::transform(float&, float&);
-%ignore spine::JitterVertexEffect::transform(float&, float&);
-%ignore spine::VertexEffect::transform(float&, float&);
 %ignore spine::DeformTimeline::setFrame(int, float, Vector<float>&);
 %ignore spine::DrawOrderTimeline::setFrame(size_t, float, Vector<int>&);
 %ignore spine::Skeleton::getBounds;
 %ignore spine::Bone::updateWorldTransform(float, float, float, float, float, float, float);
 %ignore spine::Skin::findAttachmentsForSlot;
-%ignore spine::SkeletonBinary::readSkeletonData(const unsigned char*, int);
-%ignore spine::AttachmentLoader::newRegionAttachment(Skin&, const String&, const String&);
-%ignore spine::AttachmentLoader::newMeshAttachment(Skin&, const String&, const String&);
-%ignore spine::AttachmentLoader::newBoundingBoxAttachment(Skin&, const String&);
-%ignore spine::AttachmentLoader::newPathAttachment(Skin&, const String&);
-%ignore spine::AttachmentLoader::newPointAttachment(Skin&, const String&);
-%ignore spine::AttachmentLoader::newClippingAttachment(Skin&, const String&);
 %ignore spine::TextureLoader::load(AtlasPage&, const String&);
 
 // ----- Rename Section ------
@@ -161,14 +148,13 @@ using namespace spine;
 // Note:
 //  1. 'Rename Section' should be placed before attribute definition and %import/%include
 //  2. namespace is needed
-%rename(create) spine::SkeletonAnimation::createWithFile;
-%rename(setCompleteListenerNative) spine::SkeletonAnimation::setCompleteListener;
-%rename(setTrackCompleteListenerNative) spine::SkeletonAnimation::setTrackCompleteListener;
-%rename(create) spine::SkeletonRenderer::createWithFile;
+%rename(create) cc::SkeletonAnimation::createWithFile;
+%rename(setCompleteListenerNative) cc::SkeletonAnimation::setCompleteListener;
+%rename(setTrackCompleteListenerNative) cc::SkeletonAnimation::setTrackCompleteListener;
+%rename(create) cc::SkeletonRenderer::createWithFile;
 
 %rename(frames) spine::TranslateTimeline::_frames;
 %rename(boneIndex) spine::TranslateTimeline::_boneIndex;
-%rename(frames) spine::TwoColorTimeline::_frames;
 %rename(frames) spine::IkConstraintTimeline::_frames;
 %rename(ikConstraintIndex) spine::IkConstraintTimeline::_ikConstraintIndex;
 %rename(frames) spine::TransformConstraintTimeline::_frames;
@@ -201,16 +187,12 @@ using namespace spine;
 %rename(curves) spine::PathConstraint::_curves;
 %rename(lengths) spine::PathConstraint::_lengths;
 %rename(segments) spine::PathConstraint::_segments;
-%rename(attachmentLoader) spine::SkeletonBinary::_attachmentLoader;
 %rename(minX) spine::SkeletonBounds::_minX;
 %rename(minY) spine::SkeletonBounds::_minY;
 %rename(maxX) spine::SkeletonBounds::_maxX;
 %rename(maxY) spine::SkeletonBounds::_maxY;
 %rename(boundingBoxes) spine::SkeletonBounds::_boundingBoxes;
 %rename(polygons) spine::SkeletonBounds::_polygons;
-%rename(attachmentLoader) spine::SkeletonJson::_attachmentLoader;
-%rename(JitterEffect) spine::JitterVertexEffect;
-%rename(SwirlEffect) spine::SwirlVertexEffect;
 %rename(setSkinByName) spine::Skeleton::setSkin(const String &);
 %rename(slotIndex) spine::Skin::AttachmentMap::Entry::_slotIndex;
 %rename(name) spine::Skin::AttachmentMap::Entry::_name;
@@ -255,10 +237,12 @@ using namespace spine;
 %attribute(spine::RotateTimeline, int, boneIndex, getBoneIndex, setBoneIndex);
 %attribute(spine::RotateTimeline, spine::Vector<float>&, frames, getFrames);
 
-%attribute(spine::ColorTimeline, int, slotIndex, getSlotIndex, setSlotIndex);
-%attribute(spine::ColorTimeline, spine::Vector<float>&, frames, getFrames);
+%attribute(spine::RGBATimeline, int, slotIndex, getSlotIndex, setSlotIndex);
+%attribute(spine::RGBTimeline, int, slotIndex, getSlotIndex, setSlotIndex);
+%attribute(spine::AlphaTimeline, int, slotIndex, getSlotIndex, setSlotIndex);
+%attribute(spine::RGBA2Timeline, int, slotIndex, getSlotIndex, setSlotIndex);
+%attribute(spine::RGB2Timeline, int, slotIndex, getSlotIndex, setSlotIndex);
 
-%attribute(spine::TwoColorTimeline, int, slotIndex, getSlotIndex, setSlotIndex);
 
 %attribute(spine::AttachmentTimeline, size_t, slotIndex, getSlotIndex, setSlotIndex);
 %attribute(spine::AttachmentTimeline, spine::Vector<float>&, frames, getFrames);
@@ -287,8 +271,9 @@ using namespace spine;
 %attribute(spine::TrackEntry, bool, loop, getLoop, setLoop);
 %attribute(spine::TrackEntry, bool, holdPrevious, getHoldPrevious, setHoldPrevious);
 %attribute(spine::TrackEntry, float, eventThreshold, getEventThreshold, setEventThreshold);
-%attribute(spine::TrackEntry, float, attachmentThreshold, getAttachmentThreshold, setAttachmentThreshold);
-%attribute(spine::TrackEntry, float, drawOrderThreshold, getDrawOrderThreshold, setDrawOrderThreshold);
+%attribute(spine::TrackEntry, float, mixAttachmentThreshold, getMixAttachmentThreshold, setMixAttachmentThreshold);
+%attribute(spine::TrackEntry, float, mixDrawOrderThreshold, getMixDrawOrderThreshold, setMixDrawOrderThreshold);
+%attribute(spine::TrackEntry, float, alphaAttachmentThreshold, getAlphaAttachmentThreshold, setAlphaAttachmentThreshold);
 %attribute(spine::TrackEntry, float, animationStart, getAnimationStart, setAnimationStart);
 %attribute(spine::TrackEntry, float, animationEnd, getAnimationEnd, setAnimationEnd);
 %attribute(spine::TrackEntry, float, animationLast, getAnimationLast, setAnimationLast);
@@ -322,7 +307,6 @@ using namespace spine;
 %attribute(spine::Bone, float, ascaleY, getAScaleY, setAScaleY);
 %attribute(spine::Bone, float, ashearX, getAShearX, setAShearX);
 %attribute(spine::Bone, float, ashearY, getAShearY, setAShearY);
-%attribute(spine::Bone, bool, appliedValid, isAppliedValid, setAppliedValid);
 %attribute(spine::Bone, float, a, getA, setA);
 %attribute(spine::Bone, float, b, getB, setB);
 %attribute(spine::Bone, float, c, getC, setC);
@@ -342,8 +326,9 @@ using namespace spine;
 %attribute(spine::BoneData, float, scaleY, getScaleY, setScaleY);
 %attribute(spine::BoneData, float, shearX, getShearX, setShearX);
 %attribute(spine::BoneData, float, shearY, getShearY, setShearY);
-%attribute(spine::BoneData, spine::TransformMode, transformMode, getTransformMode, setTransformMode);
 %attribute(spine::BoneData, bool, skinRequired, isSkinRequired, setSkinRequired);
+%attribute(spine::BoneData, spine::String&, icon, getIcon, setIcon);
+%attribute(spine::BoneData, bool, visible, isVisible, setVisible);
 
 %attribute(spine::ConstraintData, spine::String&, name, getName);
 %attribute(spine::ConstraintData, size_t, order, getOrder, setOrder);
@@ -389,8 +374,9 @@ using namespace spine;
 %attribute(spine::PathConstraint, spine::Slot*, target, getTarget, setTarget);
 %attribute(spine::PathConstraint, float, position, getPosition, setPosition);
 %attribute(spine::PathConstraint, float, spacing, getSpacing, setSpacing);
-%attribute(spine::PathConstraint, float, rotateMix, getRotateMix, setRotateMix);
-%attribute(spine::PathConstraint, float, translateMix, getTranslateMix, setTranslateMix);
+%attribute(spine::PathConstraint, float, mixRotate, getMixRotate, setMixRotate);
+%attribute(spine::PathConstraint, float, mixX, getMixX, setMixX);
+%attribute(spine::PathConstraint, float, mixY, getMixY, setMixY);
 %attribute(spine::PathConstraint, bool, active, isActive, setActive);
 
 %attribute(spine::PathConstraintData, spine::Vector<spine::BoneData*>&, bones, getBones);
@@ -401,8 +387,9 @@ using namespace spine;
 %attribute(spine::PathConstraintData, float, offsetRotation, getOffsetRotation, setOffsetRotation);
 %attribute(spine::PathConstraintData, float, position, getPosition, setPosition);
 %attribute(spine::PathConstraintData, float, spacing, getSpacing, setSpacing);
-%attribute(spine::PathConstraintData, float, rotateMix, getRotateMix, setRotateMix);
-%attribute(spine::PathConstraintData, float, translateMix, getTranslateMix, setTranslateMix);
+%attribute(spine::PathConstraintData, float, mixRotate, getMixRotate, setMixRotate);
+%attribute(spine::PathConstraintData, float, mixX, getMixX, setMixX);
+%attribute(spine::PathConstraintData, float, mixY, getMixY, setMixY);
 
 %attribute(spine::Skeleton, spine::SkeletonData*, data, getData);
 %attribute(spine::Skeleton, spine::Vector<spine::Bone*>&, bones, getBones);
@@ -419,11 +406,6 @@ using namespace spine;
 %attribute(spine::Skeleton, float, scaleY, getScaleY, setScaleY);
 %attribute(spine::Skeleton, float, x, getX, setX);
 %attribute(spine::Skeleton, float, y, getY, setY);
-
-%attribute_writeonly(spine::SkeletonBinary, float, scale, setScale);
-
-%attribute(spine::SkeletonClipping, spine::Vector<float>&, clippedVertices, getClippedVertices);
-%attribute(spine::SkeletonClipping, spine::Vector<unsigned short>&, clippedTriangles, getClippedTriangles);
 
 %attribute(spine::SkeletonData, spine::String&, name, getName, setName);
 %attribute(spine::SkeletonData, spine::Vector<spine::BoneData*>&, bones, getBones);
@@ -444,8 +426,6 @@ using namespace spine;
 %attribute(spine::SkeletonData, float, fps, getFps, setFps);
 %attribute(spine::SkeletonData, spine::String&, imagesPath, getImagesPath, setImagesPath);
 %attribute(spine::SkeletonData, spine::String&, audioPath, getAudioPath, setAudioPath);
-
-%attribute(spine::SkeletonJson, float, scale, setScale);
 
 %attribute(spine::Skin, spine::String&, name, getName);
 %attribute(spine::Skin, spine::Vector<BoneData*>&, bones, getBones);
@@ -469,18 +449,22 @@ using namespace spine;
 %attribute(spine::TransformConstraint, spine::TransformConstraintData&, data, getData);
 %attribute(spine::TransformConstraint, spine::Vector<spine::Bone*>&, bones, getBones);
 %attribute(spine::TransformConstraint, spine::Bone*, target, getTarget, setTarget);
-%attribute(spine::TransformConstraint, float, rotateMix, getRotateMix, setRotateMix);
-%attribute(spine::TransformConstraint, float, translateMix, getTranslateMix, setTranslateMix);
-%attribute(spine::TransformConstraint, float, scaleMix, getScaleMix, setScaleMix);
-%attribute(spine::TransformConstraint, float, shearMix, getShearMix, setShearMix);
+%attribute(spine::TransformConstraint, float, mixRotate, getMixRotate, setMixRotate);
+%attribute(spine::TransformConstraint, float, mixX, getMixX, setMixX);
+%attribute(spine::TransformConstraint, float, mixY, getMixY, setMixY);
+%attribute(spine::TransformConstraint, float, mixScaleX, getMixScaleX, setMixScaleX);
+%attribute(spine::TransformConstraint, float, mixScaleY, getMixScaleY, setMixScaleY);
+%attribute(spine::TransformConstraint, float, mixShearY, getMixShearY, setMixShearY);
 %attribute(spine::TransformConstraint, bool, active, isActive, setActive);
 
 %attribute(spine::TransformConstraintData, spine::Vector<spine::BoneData*>&, bones, getBones);
 %attribute(spine::TransformConstraintData, spine::BoneData*, target, getTarget);
-%attribute(spine::TransformConstraintData, float, rotateMix, getRotateMix);
-%attribute(spine::TransformConstraintData, float, translateMix, getTranslateMix);
-%attribute(spine::TransformConstraintData, float, scaleMix, getScaleMix);
-%attribute(spine::TransformConstraintData, float, shearMix, getShearMix);
+%attribute(spine::TransformConstraintData, float, mixX, getMixX);
+%attribute(spine::TransformConstraintData, float, mixY, getMixY);
+%attribute(spine::TransformConstraintData, float, mixRotate, getMixRotate);
+%attribute(spine::TransformConstraintData, float, mixScaleX, getMixScaleX);
+%attribute(spine::TransformConstraintData, float, mixScaleY, getMixScaleY);
+%attribute(spine::TransformConstraintData, float, mixShearY, getMixShearY);
 %attribute(spine::TransformConstraintData, float, offsetRotation, getOffsetRotation);
 %attribute(spine::TransformConstraintData, float, offsetX, getOffsetX);
 %attribute(spine::TransformConstraintData, float, offsetY, getOffsetY);
@@ -496,7 +480,7 @@ using namespace spine;
 %attribute(spine::VertexAttachment, spine::Vector<size_t>&, bones, getBones);
 %attribute(spine::VertexAttachment, spine::Vector<float>&, vertices, getVertices);
 %attribute(spine::VertexAttachment, size_t, worldVerticesLength, getWorldVerticesLength, setWorldVerticesLength);
-%attribute(spine::VertexAttachment, spine::VertexAttachment*, deformAttachment, getDeformAttachment, setDeformAttachment);
+%attribute(spine::VertexAttachment, spine::Attachment*, timelineAttachment, getTimelineAttachment, setTimelineAttachment);
 
 %attribute(spine::ClippingAttachment, spine::SlotData*, endSlot, getEndSlot, setEndSlot);
 
@@ -527,97 +511,82 @@ using namespace spine;
 %attribute(spine::RegionAttachment, float, height, getHeight, setHeight);
 %attribute(spine::RegionAttachment, spine::Color&, color, getColor);
 %attribute(spine::RegionAttachment, spine::String&, path, getPath, setPath);
-%attribute(spine::RegionAttachment, void*, rendererObject, getRendererObject, setRendererObject);
 %attribute(spine::RegionAttachment, spine::Vector<float>&, offset, getOffset);
 %attribute(spine::RegionAttachment, spine::Vector<float>&, uvs, getUVs);
-
-%attribute(spine::JitterVertexEffect, float, jitterX, getJitterX, setJitterX);
-%attribute(spine::JitterVertexEffect, float, jitterY, getJitterY, setJitterY);
-
-%attribute(spine::SwirlVertexEffect, float, centerX, getCenterX, setCenterX);
-%attribute(spine::SwirlVertexEffect, float, centerY, getCenterY, setCenterY);
-%attribute(spine::SwirlVertexEffect, float, radius, getRadius, setRadius);
-%attribute(spine::SwirlVertexEffect, float, angle, getAngle, setAngle);
-
-%attribute(spine::Vector2, float, x, getX, setX);
-%attribute(spine::Vector2, float, y, getY, setY);
 
 // ----- Import Section ------
 // Brief: Import header files which are depended by 'Include Section'
 // Note: 
 //   %import "your_header_file.h" will not generate code for that header file
 //
+#define CC_USE_SPINE_4_2 1
 %import "base/Macros.h"
 %import "base/RefCounted.h"
-%import "editor-support/spine/dll.h"
-%import "editor-support/spine/RTTI.h"
-%import "editor-support/spine/SpineString.h"
-%import "editor-support/spine/Vector.h"
+%import "editor-support/spine/4.2/spine/dll.h"
+%import "editor-support/spine/4.2/spine/RTTI.h"
+%import "editor-support/spine/4.2/spine/SpineString.h"
+%import "editor-support/spine/4.2/spine/Vector.h"
 
 // ----- Include Section ------
 // Brief: Include header files in which classes and methods will be bound
-%include "editor-support/spine/MathUtil.h"
-%include "editor-support/spine/MixBlend.h"
-%include "editor-support/spine/MixDirection.h"
-%include "editor-support/spine/TransformMode.h"
-%include "editor-support/spine/PositionMode.h"
-%include "editor-support/spine/SpacingMode.h"
-%include "editor-support/spine/RotateMode.h"
-%include "editor-support/spine/BlendMode.h"
-%include "editor-support/spine/Timeline.h"
-%include "editor-support/spine/Animation.h"
-%include "editor-support/spine/AnimationState.h"
-%include "editor-support/spine/AnimationStateData.h"
-%include "editor-support/spine/Attachment.h"
-%include "editor-support/spine/AttachmentTimeline.h"
-%include "editor-support/spine/VertexAttachment.h"
-%include "editor-support/spine/BoundingBoxAttachment.h"
-%include "editor-support/spine/Bone.h"
-%include "editor-support/spine/BoneData.h"
-%include "editor-support/spine/ClippingAttachment.h"
-%include "editor-support/spine/Color.h"
-%include "editor-support/spine/CurveTimeline.h"
-%include "editor-support/spine/ColorTimeline.h"
-%include "editor-support/spine/DeformTimeline.h"
-%include "editor-support/spine/DrawOrderTimeline.h"
-%include "editor-support/spine/Event.h"
-%include "editor-support/spine/EventData.h"
-%include "editor-support/spine/EventTimeline.h"
-%include "editor-support/spine/ConstraintData.h"
-%include "editor-support/spine/IkConstraint.h"
-%include "editor-support/spine/IkConstraintData.h"
-%include "editor-support/spine/IkConstraintTimeline.h"
-%include "editor-support/spine/MeshAttachment.h"
-%include "editor-support/spine/PathAttachment.h"
-%include "editor-support/spine/PathConstraint.h"
-%include "editor-support/spine/PathConstraintData.h"
-%include "editor-support/spine/PathConstraintMixTimeline.h"
-%include "editor-support/spine/PathConstraintPositionTimeline.h"
-%include "editor-support/spine/PathConstraintSpacingTimeline.h"
-%include "editor-support/spine/PointAttachment.h"
-%include "editor-support/spine/RegionAttachment.h"
-%include "editor-support/spine/TranslateTimeline.h"
-%include "editor-support/spine/TwoColorTimeline.h"
-%include "editor-support/spine/RotateTimeline.h"
-%include "editor-support/spine/ScaleTimeline.h"
-%include "editor-support/spine/ShearTimeline.h"
-%include "editor-support/spine/Skeleton.h"
-%include "editor-support/spine/Slot.h"
-%include "editor-support/spine/Skin.h"
-%include "editor-support/spine/SkeletonBounds.h"
-%include "editor-support/spine/SkeletonData.h"
-%include "editor-support/spine/SlotData.h"
-%include "editor-support/spine/SkeletonBinary.h"
-%include "editor-support/spine/AttachmentLoader.h"
-%include "editor-support/spine/Atlas.h"
-%include "editor-support/spine/TextureLoader.h"
+%include "editor-support/spine/4.2/spine/MathUtil.h"
+%include "editor-support/spine/4.2/spine/MixBlend.h"
+%include "editor-support/spine/4.2/spine/MixDirection.h"
+%include "editor-support/spine/4.2/spine/PositionMode.h"
+%include "editor-support/spine/4.2/spine/SpacingMode.h"
+%include "editor-support/spine/4.2/spine/RotateMode.h"
+%include "editor-support/spine/4.2/spine/BlendMode.h"
+%include "editor-support/spine/4.2/spine/Timeline.h"
+%include "editor-support/spine/4.2/spine/Animation.h"
+%include "editor-support/spine/4.2/spine/AnimationState.h"
+%include "editor-support/spine/4.2/spine/AnimationStateData.h"
+%include "editor-support/spine/4.2/spine/Attachment.h"
+%include "editor-support/spine/4.2/spine/AttachmentTimeline.h"
+%include "editor-support/spine/4.2/spine/VertexAttachment.h"
+%include "editor-support/spine/4.2/spine/BoundingBoxAttachment.h"
+%include "editor-support/spine/4.2/spine/Bone.h"
+%include "editor-support/spine/4.2/spine/BoneData.h"
+%include "editor-support/spine/4.2/spine/ClippingAttachment.h"
+%include "editor-support/spine/4.2/spine/Color.h"
+%include "editor-support/spine/4.2/spine/CurveTimeline.h"
+%include "editor-support/spine/4.2/spine/ColorTimeline.h"
+%include "editor-support/spine/4.2/spine/DeformTimeline.h"
+%include "editor-support/spine/4.2/spine/DrawOrderTimeline.h"
+%include "editor-support/spine/4.2/spine/Event.h"
+%include "editor-support/spine/4.2/spine/EventData.h"
+%include "editor-support/spine/4.2/spine/EventTimeline.h"
+%include "editor-support/spine/4.2/spine/ConstraintData.h"
+%include "editor-support/spine/4.2/spine/IkConstraint.h"
+%include "editor-support/spine/4.2/spine/IkConstraintData.h"
+%include "editor-support/spine/4.2/spine/IkConstraintTimeline.h"
+%include "editor-support/spine/4.2/spine/MeshAttachment.h"
+%include "editor-support/spine/4.2/spine/PathAttachment.h"
+%include "editor-support/spine/4.2/spine/PathConstraint.h"
+%include "editor-support/spine/4.2/spine/PathConstraintData.h"
+%include "editor-support/spine/4.2/spine/PathConstraintMixTimeline.h"
+%include "editor-support/spine/4.2/spine/PathConstraintPositionTimeline.h"
+%include "editor-support/spine/4.2/spine/PathConstraintSpacingTimeline.h"
+%include "editor-support/spine/4.2/spine/PointAttachment.h"
+%include "editor-support/spine/4.2/spine/RegionAttachment.h"
+%include "editor-support/spine/4.2/spine/TranslateTimeline.h"
+%include "editor-support/spine/4.2/spine/RotateTimeline.h"
+%include "editor-support/spine/4.2/spine/ScaleTimeline.h"
+%include "editor-support/spine/4.2/spine/ShearTimeline.h"
+%include "editor-support/spine/4.2/spine/Skeleton.h"
+%include "editor-support/spine/4.2/spine/Slot.h"
+%include "editor-support/spine/4.2/spine/Skin.h"
+%include "editor-support/spine/4.2/spine/SkeletonBounds.h"
+%include "editor-support/spine/4.2/spine/SkeletonData.h"
+%include "editor-support/spine/4.2/spine/SlotData.h"
+%include "editor-support/spine/4.2/spine/Sequence.h"
+%include "editor-support/spine/4.2/spine/Atlas.h"
+%include "editor-support/spine/4.2/spine/TextureLoader.h"
+%include "editor-support/spine/4.2/spine/TextureRegion.h"
 
-%include "editor-support/spine/TransformConstraint.h"
-%include "editor-support/spine/TransformConstraintData.h"
-%include "editor-support/spine/TransformConstraintTimeline.h"
-%include "editor-support/spine/VertexEffect.h"
+%include "editor-support/spine/4.2/spine/TransformConstraint.h"
+%include "editor-support/spine/4.2/spine/TransformConstraintData.h"
+%include "editor-support/spine/4.2/spine/TransformConstraintTimeline.h"
 
-%include "editor-support/spine-creator-support/VertexEffectDelegate.h"
 %include "editor-support/spine-creator-support/SkeletonRenderer.h"
 %include "editor-support/spine-creator-support/SkeletonAnimation.h"
 %include "editor-support/spine-creator-support/SkeletonDataMgr.h"
@@ -629,8 +598,8 @@ using namespace spine;
         IkConstraint::apply(*bone, targetX, targetY, compress, stretch, uniform, alpha);
     }
 
-    void apply2(Bone *parent, Bone *child, float targetX, float targetY, int bendDir, bool stretch, float softness, float alpha) {
-        IkConstraint::apply(*parent, *child, targetX, targetY, bendDir, stretch, softness, alpha);
+    void apply2(Bone *parent, Bone *child, float targetX, float targetY, int bendDir, bool stretch, bool uniform, float softness, float alpha) {
+        IkConstraint::apply(*parent, *child, targetX, targetY, bendDir, stretch, uniform, softness, alpha);
     }
 };
 
@@ -719,18 +688,6 @@ using namespace spine;
     }
 }
 
-%extend spine::VertexEffect {
-    void begin(spine::Skeleton *skeleton) {
-        $self->begin(*skeleton);
-    }
-}
-
-%extend spine::SwirlVertexEffect {
-    SwirlVertexEffect(float radius, spine::Interpolation *interpolation) {
-        return new SwirlVertexEffect(radius, *interpolation);
-    }
-}
-
 %extend spine::DeformTimeline {
     void setFrame(int frameIndex, float time, const ccstd::vector<float>& vertices) {
         spine::Vector<float> spVertices;
@@ -763,42 +720,6 @@ using namespace spine;
         spine::String slot(slotName.data());
         spine::String attachment(attachmentName.data());
         return *($self->getAttachment(slot, attachment));
-    }
-}
-
-%extend spine::SkeletonBinary {
-    spine::SkeletonData *readSkeletonData(const std::vector<uint8_t>& binary) {
-        std::vector<unsigned char> input;
-        for (int i = 0; i < binary.size(); ++i) {
-            input.push_back(binary[i]);
-        }
-        return $self->readSkeletonData(input.data(), input.size());
-    }
-}
-
-%extend spine::AttachmentLoader {
-    spine::RegionAttachment* newRegionAttachment(spine::Skin* skin, const spine::String& name, const spine::String& path) {
-        return $self->newRegionAttachment(*skin, name, path);
-    }
-
-    spine::MeshAttachment* newMeshAttachment(spine::Skin* skin, const spine::String& name, const spine::String& path) {
-        return $self->newMeshAttachment(*skin, name, path);
-    }
-
-    spine::BoundingBoxAttachment* newBoundingBoxAttachment(spine::Skin* skin, const spine::String& name) {
-        return $self->newBoundingBoxAttachment(*skin, name);
-    }
-
-    spine::PathAttachment* newPathAttachment(spine::Skin* skin, const spine::String& name) {
-        return $self->newPathAttachment(*skin, name);
-    }
-
-    spine::PointAttachment* newPointAttachment(spine::Skin* skin, const spine::String& name) {
-        return $self->newPointAttachment(*skin, name);
-    }
-
-    spine::ClippingAttachment* newClippingAttachment(spine::Skin* skin, const spine::String& name) {
-        return $self->newClippingAttachment(*skin, name);
     }
 }
 

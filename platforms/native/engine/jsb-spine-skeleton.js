@@ -174,8 +174,7 @@ const cacheManager = require('./jsb-cache-manager');
         this._target = target;
         this._callback = callback;
 
-        // eslint-disable-next-line no-undef
-        const AnimationEventType = legacyCC.internal.SpineAnimationEventType;
+        const AnimationEventType = cc.internal.SpineAnimationEventType;
 
         this.setStartListener(function (trackEntry) {
             if (this._target && this._callback) {
@@ -291,12 +290,17 @@ const cacheManager = require('./jsb-cache-manager');
         }
     };
 
-    skeleton.setSkeletonData = function (skeletonData) {
+    skeleton._updateUITransform = function () {
+        const skeletonData = this._skeletonData;
+        if (!skeletonData) return;
+
         if (skeletonData.width != null && skeletonData.height != null) {
             const uiTrans = this.node._uiProps.uiTransformComp;
             uiTrans.setContentSize(skeletonData.width, skeletonData.height);
         }
+    };
 
+    skeleton.setSkeletonData = function (skeletonData) {
         const uuid = skeletonData._uuid;
         if (!uuid) {
             cc.errorID(7504);
@@ -405,6 +409,10 @@ const cacheManager = require('./jsb-cache-manager');
     };
 
     skeleton.setVertexEffectDelegate = function (effectDelegate) {
+        if (cc.internal.SPINE_VERSION === '4.2') {
+            cc.warn('setVertexEffectDelegate is deprecated since spine 4.2');
+            return;
+        }
         if (this._nativeSkeleton && !this.isAnimationCached()) {
             this._nativeSkeleton.setVertexEffectDelegate(effectDelegate);
         }
@@ -490,6 +498,7 @@ const cacheManager = require('./jsb-cache-manager');
     };
 
     skeleton.setSkin = function (skinName) {
+        this._skinName = skinName;
         if (this._nativeSkeleton) return this._nativeSkeleton.setSkin(skinName);
         return null;
     };
@@ -695,8 +704,18 @@ const cacheManager = require('./jsb-cache-manager');
             this.attachUtil.init(this);
             this._preCacheMode = this._cacheMode;
 
-            this.defaultSkin && this._nativeSkeleton.setSkin(this.defaultSkin);
-            this.animation = this.defaultAnimation;
+            if (this.defaultSkin && this.defaultSkin !== '') {
+                this.setSkin(this.defaultSkin);
+            } else if (this._skinName && this._skinName !== '') {
+                this.setSkin(this._skinName);
+            }
+            if (this.defaultAnimation) {
+                this.animation = this.defaultAnimation;
+            } else if (this._animationName) {
+                this.animation = this._animationName;
+            } else {
+                this.animation = '';
+            }
         } else if (this._nativeSkeleton) {
             this._nativeSkeleton.stopSchedule();
             this._nativeSkeleton._comp = null;
