@@ -34,8 +34,11 @@ export enum ContextType {
     WEBVIEW_UTILS,
     DISPLAY_UTILS,
     UV_ASYNC_SEND,
-    VIDEO_UTILS
+    VIDEO_UTILS,
+    MOUSE_WHEEL_NAPI
 }
+
+export type AnyType = number | boolean | string | object | null | undefined | bigint;
 
 export class Constants {
     static readonly APP_KEY_WORKER_MANAGER = "app_key_worker_manager";

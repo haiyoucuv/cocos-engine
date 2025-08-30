@@ -31,6 +31,7 @@ import type { Sprite } from '../../components/sprite';
 import type { UIRenderer } from '../../framework/ui-renderer';
 import type { IAssembler } from '../../renderer/base';
 import type { StaticVBChunk } from '../../renderer/static-vb-accessor';
+import { dynamicAtlasManager } from '../../utils/dynamic-atlas/atlas-manager';
 
 const m = new Mat4();
 
@@ -70,6 +71,8 @@ class Tiled implements IAssembler {
             return;
         }
 
+        dynamicAtlasManager.packToDynamicAtlas(sprite, frame);
+
         if (!renderData.vertDirty) {
             return;
         }
@@ -101,7 +104,7 @@ class Tiled implements IAssembler {
 
         this.updateVerts(sprite, sizableWidth, sizableHeight, row, col);
 
-        if (renderData.vertexCount !== row * col * 4) {
+        if (JSB && renderData.vertexCount !== row * col * 4) {
             sprite.renderEntity.colorDirty = true;
         }
         // update data property
@@ -121,6 +124,7 @@ class Tiled implements IAssembler {
     }
 
     private createQuadIndices (indexCount: number): void {
+        if (!JSB) return;
         if (indexCount % 6 !== 0) {
             errorID(16308);
             return;

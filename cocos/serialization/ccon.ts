@@ -23,8 +23,10 @@
 */
 
 import { getError, cclegacy } from '../core';
+import { notepackDecode } from '../../external/deserialize/notepack_decode';
+import { notepackEncode } from '../../external/deserialize/notepack_encode';
 
-const VERSION = 1;
+const VERSION = 2;
 
 const MAGIC = 0x4E4F4343;
 
@@ -48,37 +50,10 @@ export class CCON {
     private declare _chunks: Uint8Array[];
 }
 
-interface CCONPreface {
-    version: number;
-    document: unknown;
-    chunks: string[];
-}
-
-export function encodeCCONJson (ccon: CCON, chunkURLs: string[]): unknown {
-    return {
-        version: VERSION,
-        document: ccon.document,
-        chunks: chunkURLs,
-    } as unknown;
-}
-
-export function parseCCONJson (json: unknown): {
-    chunks: string[];
-    document: unknown;
-} {
-    const cconPreface = json as CCONPreface;
-
-    return {
-        chunks: cconPreface.chunks,
-        document: cconPreface.document,
-    };
-}
-
 export function encodeCCONBinary (ccon: CCON): Uint8Array {
     const { document, chunks } = ccon;
 
-    const jsonString = JSON.stringify(document);
-    const jsonBytes = encodeJson(jsonString);
+    const jsonBytes = new Uint8Array(notepackEncode(document));
     const ccobBuilder = new BufferBuilder();
 
     const header = new ArrayBuffer(12);
@@ -125,9 +100,6 @@ export function decodeCCONBinary (bytes: Uint8Array): CCON {
     }
 
     const version = dataView.getUint32(4, true);
-    if (version !== VERSION) {
-        throw new InvalidCCONError(getError(13101, version));
-    }
 
     const dataByteLength = dataView.getUint32(8, true);
     if (dataByteLength !== dataView.byteLength) {
@@ -140,10 +112,14 @@ export function decodeCCONBinary (bytes: Uint8Array): CCON {
     chunksStart += 4;
     const jsonData = new Uint8Array(dataView.buffer, chunksStart + dataView.byteOffset, jsonDataLength);
     chunksStart += jsonDataLength;
-    const jsonString = decodeJson(jsonData);
     let json: unknown;
     try {
-        json = JSON.parse(jsonString);
+        if (version === 1) {
+            const jsonString = decodeJson(jsonData);
+            json = JSON.parse(jsonString);
+        } else if (version === 2) {
+            json = notepackDecode(jsonData);
+        }
     } catch (err) {
         throw new InvalidCCONError(err as string);
     }
@@ -181,22 +157,6 @@ interface BufferConstructor {
     from(input: string, encoding: 'utf8'): Buffer;
 
     from(buffer: ArrayBuffer, byteOffset?: number, byteLength?: number): Buffer;
-}
-
-function encodeJson (input: string): Uint8Array {
-    if (typeof TextEncoder !== 'undefined') {
-        return new TextEncoder().encode(input);
-    } else if ('Buffer' in globalThis) {
-        const { Buffer } = (globalThis as unknown as { Buffer: BufferConstructor });
-        const buffer = Buffer.from(input, 'utf8');
-        return new Uint8Array(
-            buffer.buffer,
-            buffer.byteOffset,
-            buffer.length,
-        );
-    } else {
-        throw new Error(getError(13103));
-    }
 }
 
 function decodeJson (data: Uint8Array): string {
@@ -258,6 +218,5 @@ export class BufferBuilder {
     }
 }
 
-cclegacy.internal.parseCCONJson = parseCCONJson;
 cclegacy.internal.decodeCCONBinary = decodeCCONBinary;
 cclegacy.internal.CCON = CCON;

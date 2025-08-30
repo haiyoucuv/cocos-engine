@@ -165,6 +165,7 @@ module.exports = link(mixin({
             RenderRoot2D: `${url}/${version}/manual/zh/ui-system/components/editor/renderroot2d.html`,
             ReflectionProbe: `${url}/${version}/manual/zh/concepts/scene/light/probe/reflection-art-workflow.html`,
             Sorting: `${url}/${version}/manual/zh/engine/rendering/sorting.html`,
+            Sorting2D: `${url}/${version}/manual/zh/engine/rendering/sorting-2d.html`,
         },
         assets: {
             javascript: `${url}/${version}/manual/zh/concepts/scripting/plugin-scripts.html`,
@@ -953,6 +954,10 @@ module.exports = link(mixin({
             label: "基础 2D 功能",
             description: "常用于一般 2D 应用的工具与组件。",
         },
+        sorting_2d: {
+            label: "2D 渲染排序",
+            description: "根据 Sorting2D 组件中的配置对 UIRenderer 进行排序。",
+        },
         rich_text: {
             label: "富文本",
             description: "富文本支持。",
@@ -1334,6 +1339,7 @@ module.exports = link(mixin({
 require('./modules/physics'),
 require('./modules/rendering'),
 require('./modules/ui.js'),
+require('./modules/terrain.js'),
 require('./animation'),
 
 ));

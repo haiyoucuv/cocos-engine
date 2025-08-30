@@ -65,17 +65,18 @@ export class BmfontUtils {
         layout.overFlow = overflow;
         layout.lineHeight = comp.lineHeight;
 
-        outputLayoutData.nodeContentSize.width = trans.width;
-        outputLayoutData.nodeContentSize.height = trans.height;
+        const nodeContentSize = outputLayoutData.nodeContentSize;
+        nodeContentSize.width = trans.width;
+        nodeContentSize.height = trans.height;
 
         // should wrap text
         if (overflow === Overflow.NONE) {
             layout.wrapping = false;
-            outputLayoutData.nodeContentSize.width += shareLabelInfo.margin * 2;
-            outputLayoutData.nodeContentSize.height += shareLabelInfo.margin * 2;
+            nodeContentSize.width += shareLabelInfo.margin * 2;
+            nodeContentSize.height += shareLabelInfo.margin * 2;
         } else if (overflow === Overflow.RESIZE_HEIGHT) {
             layout.wrapping = true;
-            outputLayoutData.nodeContentSize.height += shareLabelInfo.margin * 2;
+            nodeContentSize.height += shareLabelInfo.margin * 2;
         } else {
             layout.wrapping = comp.enableWrapText;
         }
@@ -172,7 +173,8 @@ export class BmfontUtils {
     }
 
     updateUVs (label: Label): void {
-        const renderData = label.renderData!;
+        const renderData = label.renderData;
+        if (!renderData) return;
         const vData = renderData.chunk.vb;
         const vertexCount = renderData.vertexCount;
         const stride = renderData.floatStride;
@@ -187,8 +189,8 @@ export class BmfontUtils {
     }
 
     updateColor (label: Label): void {
-        if (JSB) {
-            const renderData = label.renderData!;
+        const renderData = label.renderData;
+        if (JSB && renderData) {
             const vertexCount = renderData.vertexCount;
             if (vertexCount === 0) return;
             const vData = renderData.chunk.vb;
@@ -210,7 +212,8 @@ export class BmfontUtils {
     }
 
     protected resetRenderData (comp: Label): void {
-        const renderData = comp.renderData!;
+        const renderData = comp.renderData;
+        if (!renderData) return;
         renderData.dataLength = 0;
         renderData.resize(0, 0);
     }

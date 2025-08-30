@@ -39,6 +39,7 @@ import {
     Filter,
     TextureBlit,
     DescriptorSetInfo,
+    Format,
 } from '../base/define';
 import { Framebuffer } from '../base/framebuffer';
 import { InputAssembler } from '../base/input-assembler';
@@ -232,7 +233,7 @@ export class WebGPUCommandBuffer extends CommandBuffer {
             this._nativePassDesc.colorAttachments[i].clearValue = [clearColors[i].x, clearColors[i].y, clearColors[i].z, clearColors[i].w];
         }
 
-        if (this._wgpuRenderPass.depthStencilAttachment) {
+        if (this._wgpuRenderPass.depthStencilAttachment?.format !== Format.UNKNOWN) {
             const tex = gpuFramebuffer.gpuDepthStencilTexture?.gpuTexture;
             const depthTex = tex ? tex.createView() : swapchain.gpuDepthStencilTextureView;
             const depthStencilAttachment = this._nativePassDesc.depthStencilAttachment!;
@@ -619,7 +620,7 @@ export class WebGPUCommandBuffer extends CommandBuffer {
         for (let i = 0; i < groupSets.length; i++) {
             const currSetIdx = groupSets[i];
             const currDesc = descriptorSets[currSetIdx];
-            if (currDesc) {
+            if (currDesc && currDesc.gpuDescriptorSet) {
                 currDesc.prepare();
             } else {
                 const currLayout = wgpuPipLayout.setLayouts[currSetIdx];

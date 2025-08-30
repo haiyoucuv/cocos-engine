@@ -56,7 +56,6 @@
 
 #if CC_USE_BOX2D_JSB
 #include "bindings/auto/jsb_box2d_auto.h"
-#include "box2d/box2d.h"
 #endif
 
 ///////////////////////// utils /////////////////////////
@@ -1208,9 +1207,12 @@ bool seval_to_Map_string_key(const se::Value &v, cc::RefMap<ccstd::string, cc::m
 
     se::Value tmp;
     for (const auto &key : allKeys) {
-        auto pngPos = key.find(".png");
-        if (pngPos == ccstd::string::npos) {
-            continue;
+        auto picExist = key.find(".png");
+        if (picExist == ccstd::string::npos) {
+            picExist = key.find(".jpg");
+            if (picExist == ccstd::string::npos) {
+                continue;
+            }
         }
 
         ok = obj->getProperty(key.c_str(), &tmp);
@@ -1548,7 +1550,7 @@ bool nativevalue_to_se(const ccstd::vector<std::shared_ptr<cc::physics::TriggerE
 
 bool nativevalue_to_se(const ccstd::vector<cc::physics::ContactPoint> &from, se::Value &to, se::Object * /*ctx*/) {
     const auto contactCount = from.size();
-    se::HandleObject array(se::Object::createArrayObject(contactCount));
+    se::HandleObject array(se::Object::createArrayObject(contactCount * cc::physics::ContactPoint::COUNT));
     for (size_t i = 0; i < contactCount; i++) {
         auto t = i * cc::physics::ContactPoint::COUNT;
         uint32_t j = 0;
@@ -1588,7 +1590,7 @@ bool nativevalue_to_se(const ccstd::vector<std::shared_ptr<cc::physics::ContactE
 
 bool nativevalue_to_se(const ccstd::vector<cc::physics::CharacterControllerContact> &from, se::Value &to, se::Object * /*ctx*/) {
     const auto contactCount = from.size();
-    se::HandleObject array(se::Object::createArrayObject(contactCount));
+    se::HandleObject array(se::Object::createArrayObject(contactCount * cc::physics::CharacterControllerContact::COUNT));
     for (size_t i = 0; i < contactCount; i++) {
         auto t = i * cc::physics::CharacterControllerContact::COUNT;
         uint32_t j = 0;

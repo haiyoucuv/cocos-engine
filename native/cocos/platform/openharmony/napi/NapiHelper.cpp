@@ -31,6 +31,7 @@
 #include "platform/openharmony/FileUtils-OpenHarmony.h"
 #include "platform/openharmony/OpenHarmonyPlatform.h"
 #include "platform/openharmony/modules/SystemWindow.h"
+#include <thread>
 
 #if CC_USE_EDITBOX
     #include "ui/edit-box/EditBox-openharmony.h"
@@ -54,7 +55,8 @@ enum ContextType {
     WEBVIEW_UTILS,
     DISPLAY_UTILS,
     UV_ASYNC_SEND,
-    VIDEO_UTILS
+    VIDEO_UTILS,
+    MOUSE_WHEEL_NAPI
 };
 
 #define KEYCODE_BACK_OH 6
@@ -62,6 +64,7 @@ enum ContextType {
 static Napi::Env gWorkerEnv(nullptr);
 static Napi::FunctionReference *gPostMessageToUIThreadFunc = nullptr;
 static Napi::FunctionReference *gPostSyncMessageToUIThreadFunc = nullptr;
+static std::thread::id gMainThreadId;
 
 #define DEFINE_FUNCTION_CALLBACK(functionName, cachedFunctionRefPtr)                                             \
     static void functionName(const Napi::CallbackInfo &info) {                                                   \
@@ -121,6 +124,17 @@ Napi::Value NapiHelper::napiCallFunction(const char *functionName, float duratio
         return {};
     }
     const std::initializer_list<napi_value> args = {Napi::Number::New(env, duration)};
+    return funcVal.As<Napi::Function>().Call(env.Global(), args);
+}
+
+/* static */
+Napi::Value NapiHelper::napiCallFunction(const char *functionName, const std::string& str) {
+    auto env = getWorkerEnv();
+    auto funcVal = env.Global().Get(functionName);
+    if (!funcVal.IsFunction()) {
+        return {};
+    }
+    const std::initializer_list<napi_value> args = { Napi::String::New(env, str) };
     return funcVal.As<Napi::Function>().Call(env.Global(), args);
 }
 
@@ -325,6 +339,16 @@ static void napiOnVideoEvent(const Napi::CallbackInfo &info) {
     }
 }
 
+static void napiOnMouseWheel(const Napi::CallbackInfo &info) {
+    if(info.Length() != 2) {
+        Napi::Error::New(info.Env(), "napiOnMouseWheel , 1 argument expected").ThrowAsJavaScriptException();
+        return;
+    }
+    std::string eventType = info[0].As<Napi::String>().ToString();
+    float offsetY = info[1].As<Napi::Number>().FloatValue();
+    OpenHarmonyPlatform::getInstance()->dispatchMouseWheelCB(eventType, offsetY);
+}
+
 // NAPI Interface
 static Napi::Value getContext(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
@@ -400,6 +424,9 @@ static Napi::Value getContext(const Napi::CallbackInfo &info) {
         case VIDEO_UTILS: {
             exports["onVideoEvent"] = Napi::Function::New(env, napiOnVideoEvent);
         } break;
+        case MOUSE_WHEEL_NAPI: {
+            exports["onMouseWheel"] = Napi::Function::New(env, napiOnMouseWheel);
+        } break;
         default:
             CC_LOG_ERROR("unknown type");
     }
@@ -473,17 +500,32 @@ Napi::Value evalString(const Napi::CallbackInfo &info){
         return env.Undefined();
     }
 
-    se::AutoHandleScope hs;
-    
     size_t length = value.length();
     char* cValue = new char[length + 1];
     strcpy(cValue, value.c_str());
-    se::Value ret;
-    se::ScriptEngine::getInstance()->evalString(cValue, length, &ret);
-    delete[] cValue;
-    Napi::Value result;
-    sevalue_to_napivalue(ret, &result, env);
-        
+
+    BaseEngine::SchedulerPtr scheduler =
+        CC_CURRENT_APPLICATION() ? CC_CURRENT_APPLICATION()->getEngine()->getScheduler() : nullptr;
+    if (!scheduler) {
+        delete[] cValue;
+        return env.Undefined();
+    }
+    Napi::Value result = env.Undefined();
+    if(gMainThreadId == std::this_thread::get_id()) {
+        scheduler->performFunctionInCocosThread([cValue, length]() {
+            se::AutoHandleScope hs;
+            se::Value ret;
+            se::ScriptEngine::getInstance()->evalString(cValue, length, &ret);
+            delete[] cValue;
+        });
+    } else {
+        se::AutoHandleScope hs;
+        se::Value ret;
+        se::ScriptEngine::getInstance()->evalString(cValue, length, &ret);
+        delete[] cValue;
+        sevalue_to_napivalue(ret, &result, env);
+    }
+
     return result;
 }
 
@@ -494,7 +536,10 @@ Napi::Object NapiHelper::init(Napi::Env env, Napi::Object exports) {
     bool ret = exportFunctions(exports);
     if (!ret) {
         CC_LOG_ERROR("NapiHelper init failed");
+    } else {
+        gMainThreadId = std::this_thread::get_id();
     }
+
     return exports;
 }
 

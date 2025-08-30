@@ -53,7 +53,8 @@ cc_set_if_undefined(USE_WEBP                 ON)
 cc_set_if_undefined(NET_MODE                  0) # 0 is client
 cc_set_if_undefined(USE_REMOTE_LOG           OFF)
 cc_set_if_undefined(USE_ADPF                 OFF)
-cc_set_if_undefined(USE_GOOGLE_BILLING  OFF)
+cc_set_if_undefined(USE_GOOGLE_BILLING       OFF)
+cc_set_if_undefined(USE_GOOGLE_PLAY_GAMES    OFF)
 
 if(ANDROID AND NOT DEFINED USE_CCACHE)
     if("$ENV{COCOS_USE_CCACHE}" STREQUAL "1")
@@ -100,6 +101,11 @@ if(NOT WINDOWS)
     add_definitions(-DBOOST_NO_CXX98_FUNCTION_BASE)
 endif()
 
+# https://stackoverflow.com/questions/78598141/first-stdmutexlock-crashes-in-application-built-with-latest-visual-studio
+if(WINDOWS)
+    add_definitions(-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+endif()
+
 add_definitions(-DCC_NETMODE_CLIENT=0)
 add_definitions(-DCC_NETMODE_LISTEN_SERVER=1)
 add_definitions(-DCC_NETMODE_HOST_SERVER=2)
@@ -107,13 +113,6 @@ if(${NET_MODE} EQUAL "0" OR ${NET_MODE} EQUAL "1" OR ${NET_MODE} EQUAL "2")
     add_definitions(-DCC_NETMODE=${NET_MODE})
 else()
     message(FATAL_ERROR "NET_MODE only support setting to 1 2 or 3.")
-endif()
-
-if(USE_PHYSICS_PHYSX)
-    if (ANDROID AND CMAKE_ANDROID_ARCH_ABI MATCHES x86)
-        set(USE_PHYSICS_PHYSX OFF)
-        message(AUTHOR_WARNING "Native PhysX does not support Google Android X86")
-    endif()
 endif()
 
 if(NOT USE_SOCKET)
@@ -583,6 +582,8 @@ elseif(OPENHARMONY)
         cocos/platform/openharmony/napi/NapiHelper.h
         cocos/platform/openharmony/napi/NapiValueConverter.cpp
         cocos/platform/openharmony/napi/NapiValueConverter.h
+        cocos/platform/openharmony/napi/NapiPromiseBridge.cpp
+        cocos/platform/openharmony/napi/NapiPromiseBridge.h
         cocos/platform/openharmony/napi/native_common.h
         cocos/platform/openharmony/WorkerMessageQueue.cpp
         cocos/platform/openharmony/WorkerMessageQueue.h
@@ -770,6 +771,18 @@ elseif(ANDROID OR OHOS)
     endif()
 endif()
 
+
+if(USE_GOOGLE_BILLING OR USE_GOOGLE_PLAY_GAMES)
+    cocos_source_files(
+        vendor/google/common/ScopedListener.cpp
+        vendor/google/common/ScopedListener.h
+        vendor/google/common/JniUtils.cpp
+        vendor/google/common/JniUtils.h
+        vendor/google/common/JsUtils.cpp
+        vendor/google/common/JsUtils.h
+    )
+endif()
+
 if(USE_GOOGLE_BILLING)
     cocos_source_files(
         vendor/google/billing/GoogleBilling.cpp
@@ -801,6 +814,25 @@ if(USE_GOOGLE_BILLING)
         vendor/google/billing/result-values/ProductDetails.cpp
         vendor/google/billing/result-values/UserChoiceDetails.h
     )
+endif()
+
+if(USE_GOOGLE_PLAY_GAMES)
+cocos_source_files(
+    vendor/google/play/PlayTask.h
+    vendor/google/play/PlayTask.cpp
+    vendor/google/play/PlayTaskManager.h
+    vendor/google/play/PlayTaskManager.cpp
+    vendor/google/play/TResult.h
+
+    vendor/google/play/PlayGames.h
+    vendor/google/play/PlayGames.cpp
+    vendor/google/play/GamesSignInClient.h
+    vendor/google/play/GamesSignInClient.cpp
+    vendor/google/play/AchievementsClient.h
+    vendor/google/play/AchievementsClient.cpp
+    vendor/google/play/RecallClient.h
+    vendor/google/play/RecallClient.cpp
+)
 endif()
 
 if(ANDROID)
@@ -1109,9 +1141,12 @@ set(SWIG_OUTPUT ${SWIG_OUTPUT_ROOT}/cocos/bindings/auto)
 cc_gen_swig_files(${CMAKE_CURRENT_LIST_DIR}/tools/swig-config ${SWIG_OUTPUT})
 
 if(USE_GOOGLE_BILLING) 
-    cc_gen_swig_files(${CMAKE_CURRENT_LIST_DIR}/tools/swig-config/android ${SWIG_OUTPUT})
+    cc_gen_swig_files(${CMAKE_CURRENT_LIST_DIR}/tools/swig-config/android/google/billing ${SWIG_OUTPUT})
 endif()
 
+if(USE_GOOGLE_PLAY_GAMES)
+    cc_gen_swig_files(${CMAKE_CURRENT_LIST_DIR}/tools/swig-config/android/google/play ${SWIG_OUTPUT})
+endif()
 ##### platform
 cocos_source_files(
     cocos/platform/Image.cpp
@@ -1233,6 +1268,10 @@ endif()
 
 if(USE_GOOGLE_BILLING)
     list(APPEND CC_JNI_SRC_FILES ${CWD}/cocos/platform/java/jni/JniGoogleBillingHandler.cpp)
+endif()
+
+if(USE_GOOGLE_PLAY_GAMES)
+    list(APPEND CC_JNI_SRC_FILES ${CWD}/cocos/platform/java/jni/JniGooglePlayHandler.cpp)
 endif()
 
 ##### renderer
@@ -1496,7 +1535,7 @@ cocos_source_files(
                  cocos/renderer/pipeline/custom/NativeBuiltinUtils.cpp
                  cocos/renderer/pipeline/custom/NativeBuiltinUtils.h
                  cocos/renderer/pipeline/custom/NativeExecutor.cpp
-                 cocos/renderer/pipeline/custom/NativeExecutorDescriptor.cpp
+                 cocos/renderer/pipeline/custom/NativeExecutorDescriptor2.cpp
                  cocos/renderer/pipeline/custom/NativeExecutorRenderGraph.h
                  cocos/renderer/pipeline/custom/NativeFactory.cpp
                  cocos/renderer/pipeline/custom/NativeFwd.h
@@ -2290,6 +2329,13 @@ if(USE_GOOGLE_BILLING)
     cocos_source_files(
         NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_google_billing_auto.cpp
                                 ${SWIG_OUTPUT}/jsb_google_billing_auto.h
+    )
+endif()
+
+if(USE_GOOGLE_PLAY_GAMES)
+    cocos_source_files(
+        NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_google_play_auto.cpp
+                                ${SWIG_OUTPUT}/jsb_google_play_auto.h
     )
 endif()
 
@@ -3393,7 +3439,9 @@ function(cc_apply_definations target)
         $<$<OR:$<CONFIG:Debug>,$<BOOL:${CC_DEBUG_FORCE}>>:CC_DEBUG=1>
         $<IF:$<BOOL:${USE_ADPF}>,CC_USE_ADPF=1,CC_USE_ADPF=0>
         $<IF:$<BOOL:${USE_GOOGLE_BILLING}>,CC_USE_GOOGLE_BILLING=1,CC_USE_GOOGLE_BILLING=0>
+        $<IF:$<BOOL:${USE_GOOGLE_PLAY_GAMES}>,CC_USE_GOOGLE_PLAY_GAMES=1,CC_USE_GOOGLE_PLAY_GAMES=0>
         $<IF:$<BOOL:${USE_BOX2D_JSB}>,CC_USE_BOX2D_JSB=1,CC_USE_BOX2D_JSB=0>
+        
     )
 endfunction()
 

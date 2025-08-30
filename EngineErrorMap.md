@@ -1875,7 +1875,7 @@ We don't currently support conversion of \`CubicSplineQuatValue\`.
 
 ### 3936
 
-Instancing/Batching enabled for non-baked skinning model '%s', this may result in unexpected rendering artifacts. Consider turning it off in the material if you do not intend to do this.
+Instancing/Batching enabled for non-baked skinning model or used AnimationController '%s', this may result in unexpected rendering artifacts. Consider turning it off in the material if you do not intend to do this.
 
 ### 3937
 
@@ -3500,6 +3500,10 @@ The effect('%s') you are looking for does not exist, please confirm the effect n
 ### 16201
 
 The asset replacing failed, can not found override asset('%s') for '%s'
+
+### 16300
+
+node '%s' doesn't have any UIRenderer component, this component will not work. please add UIRenderer component first
 
 ### 16301
 

@@ -79,18 +79,18 @@ class MotionStreakAssembler implements IAssembler {
 
         let vertexCount = 0;
         let indexCount = 0;
-
-        if (points.length < 2) {
+        const renderData = comp.renderData;
+        if (points.length < 2 || !renderData) {
             return;
         }
 
-        const renderData = comp.renderData!;
         this.updateRenderDataCache(comp, renderData);
         const color = comp.color;
         const cr = color.r;
         const cg = color.g;
         const cb = color.b;
-        const ca = color.a;
+
+        const ca = node._uiProps.opacity * color.a;
 
         const prev = points[1];
         prev.distance = Vec2.subtract(_vec2, cur.point, prev.point).length();
@@ -154,6 +154,7 @@ class MotionStreakAssembler implements IAssembler {
         indexCount = vertexCount <= 2 ? 0 : (vertexCount - 2) * 3;
 
         renderData.resize(vertexCount, indexCount); // resize
+
         if (JSB) {
             const indexCount = renderData.indexCount;
             this.createQuadIndices(comp, indexCount);
@@ -168,11 +169,14 @@ class MotionStreakAssembler implements IAssembler {
     }
 
     private updateWorldVertexAllData (comp: MotionStreak): void {
-        const renderData = comp.renderData!;
+        if (!JSB) return;
+        const renderData = comp.renderData;
+        if (!renderData) return;
         const stride = renderData.floatStride;
         const dataList = renderData.data;
         const vData = renderData.chunk.vb;
-        for (let i  = 0; i < dataList.length; i++) {
+        const vertexCount = renderData.vertexCount;
+        for (let i  = 0; i < vertexCount; i++) {
             const offset = i * stride;
             vData[offset + 0] = dataList[i].x;
             vData[offset + 1] = dataList[i].y;
@@ -184,7 +188,9 @@ class MotionStreakAssembler implements IAssembler {
     }
 
     private createQuadIndices (comp: MotionStreak, indexCount: number): void {
-        const renderData = comp.renderData!;
+        if (!JSB) return;
+        const renderData = comp.renderData;
+        if (!renderData) return;
         const chunk = renderData.chunk;
         const vid = 0;
         const meshBuffer = chunk.meshBuffer;
@@ -219,7 +225,8 @@ class MotionStreakAssembler implements IAssembler {
     }
 
     fillBuffers (comp: MotionStreak, renderer: IBatcher): void {
-        const renderData = comp.renderData!;
+        const renderData = comp.renderData;
+        if (!renderData) return;
         const chunk = renderData.chunk;
         const dataList = renderData.data;
 

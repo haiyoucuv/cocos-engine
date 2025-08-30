@@ -85,6 +85,7 @@ SkeletonCacheAnimation::~SkeletonCacheAnimation() {
     for (auto &item : _materialCaches) {
         CC_SAFE_DELETE(item.second);
     }
+    _entity = nullptr;
     stopSchedule();
 }
 
@@ -158,8 +159,8 @@ void SkeletonCacheAnimation::render(float /*dt*/) {
     if (!_animationData) return;
     SkeletonCache::FrameData *frameData = _animationData->getFrameData(_curFrameIndex);
     if (!frameData) return;
-    auto *entity = _entity;
-    entity->clearDynamicRenderDrawInfos();
+    if (!_entity || !_entity->getNode()) return;
+    _entity->clearDynamicRenderDrawInfos();
 
     const auto &segments = frameData->getSegments();
     const auto &colors = frameData->getColors();
@@ -196,7 +197,7 @@ void SkeletonCacheAnimation::render(float /*dt*/) {
     int vs = _useTint ? vs2 : vs1;
     int vbs = _useTint ? vbs2 : vbs1;
 
-    auto &nodeWorldMat = entity->getNode()->getWorldMatrix();
+    auto &nodeWorldMat = _entity->getNode()->getWorldMatrix();
 
     int colorOffset = 0;
     SkeletonCache::ColorData *nowColor = colors[colorOffset++];
@@ -268,7 +269,7 @@ void SkeletonCacheAnimation::render(float /*dt*/) {
             vertexFloats = segment->vertexFloatCount;
         }
         curDrawInfo = requestDrawInfo(segmentCount++);
-        entity->addDynamicRenderDrawInfo(curDrawInfo);
+        _entity->addDynamicRenderDrawInfo(curDrawInfo);
         // fill new texture index
         curTexture = static_cast<cc::Texture2D *>(segment->getTexture()->getRealTexture());
         gfx::Texture *texture = curTexture->getGFXTexture();
@@ -460,6 +461,9 @@ void SkeletonCacheAnimation::beginSchedule() {
 void SkeletonCacheAnimation::stopSchedule() {
     MiddlewareManager::getInstance()->removeTimer(this);
 
+    if (_entity != nullptr) {
+        _entity->clearDynamicRenderDrawInfos();
+    }
     if (_sharedBufferOffset) {
         _sharedBufferOffset->reset();
         _sharedBufferOffset->clear();

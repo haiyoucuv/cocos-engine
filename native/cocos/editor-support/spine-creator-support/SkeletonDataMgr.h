@@ -33,6 +33,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include "AttachmentVertices.h"
 #include "base/RefCounted.h"
 #include "spine/SkeletonData.h"
 #include "spine/spine.h"
@@ -40,7 +42,21 @@
 using namespace spine;
 namespace cc {
 
-class SkeletonDataInfo;
+class AttachmentVertices;
+
+
+class SkeletonDataInfo {
+public:
+    SkeletonDataInfo() = default;
+
+    ~SkeletonDataInfo();
+
+    SkeletonData *data = nullptr;
+    Atlas *atlas = nullptr;
+    AttachmentLoader *attachmentLoader = nullptr;
+    std::vector<int> texturesIndex;
+    std::unordered_map<Attachment *, AttachmentVertices *> attachmentVerticesMap;
+};
 
 /**
  * Cache skeleton data.
@@ -71,15 +87,18 @@ public:
     // equal to 'deleteByUUID'
     void releaseByUUID(const std::string &uuid);
 
+    SkeletonDataInfo *getSkeletonDataInfo(const std::string &uuid);
+
     using destroyCallback = std::function<void(int)>;
     void setDestroyCallback(destroyCallback callback) {
         _destroyCallback = std::move(callback);
     }
+
+    std::vector<SkeletonDataInfo*> getSkeletonDataInfos() const;
 
 private:
     static SkeletonDataMgr *instance;
     destroyCallback _destroyCallback = nullptr;
     std::map<std::string, SkeletonDataInfo *> _dataMap;
 };
-
 } // namespace cc

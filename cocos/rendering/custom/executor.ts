@@ -67,6 +67,8 @@ import {
     SurfaceTransform,
     Swapchain,
     Texture,
+    TextureBlit,
+    Filter,
     TextureInfo,
     TextureType,
     TextureUsageBit,
@@ -85,6 +87,7 @@ import { DescriptorSetData, LayoutGraphData, LayoutGraphDataValue, PipelineLayou
 import { BasicPipeline } from './pipeline';
 import {
     Blit,
+    BlitType,
     ClearView,
     ComputePass,
     ComputeSubpass,
@@ -114,11 +117,14 @@ import {
     ResourceTraits,
     SceneData,
     SubresourceView,
+    Subpass,
+    SubpassGraph,
 } from './render-graph';
 import {
     AccessType,
     AttachmentType,
     QueueHint,
+    ResolvePair,
     ResourceDimension,
     ResourceFlags,
     ResourceResidency,
@@ -283,14 +289,25 @@ class DeviceTexture extends DeviceResource {
             [ResourceFlags.TRANSFER_SRC, TextureUsageBit.TRANSFER_SRC],
             [ResourceFlags.TRANSFER_DST, TextureUsageBit.TRANSFER_DST],
         ].reduce((acc, [flag, bit]) => (desc.flags & flag ? acc | bit : acc), TextureUsageBit.NONE);
-
-        this._texture = context.device.createTexture(new TextureInfo(
+        const texInfo = new TextureInfo(
             type,
             usageFlags,
             desc.format,
             desc.width,
             desc.height,
-        ));
+        );
+        texInfo.samples = desc.sampleCount;
+        this._texture = context.device.createTexture(texInfo);
+    }
+
+    public getGPUTexture (): Texture {
+        let gpuTex: Texture = this._texture!;
+        if (this.framebuffer) {
+            gpuTex = this.framebuffer.colorTextures[0]!;
+        } else if (this.swapchain) {
+            gpuTex = this.swapchain.colorTexture;
+        }
+        return gpuTex;
     }
 
     release (): void {
@@ -733,6 +750,7 @@ class RenderPassLayoutInfo {
 const profilerViewport = new Viewport();
 const renderPassArea = new Rect();
 const resourceVisitor = new ResourceVisitor();
+const textureBlit = new TextureBlit();
 class DeviceRenderPass implements RecordingInterface {
     protected _renderPass: RenderPass;
     protected _framebuffer!: Framebuffer;
@@ -747,12 +765,49 @@ class DeviceRenderPass implements RecordingInterface {
     protected _viewport: Viewport | null = null;
     private _layout: RenderPassLayoutInfo | null = null;
     private _idxOfRenderData: number = 0;
+
+    private _traversalResolves (callback: (resolvePair: ResolvePair) => void): void {
+        const subpassGraph = this._rasterPass.subpassGraph;
+        const subpasses = subpassGraph._subpasses;
+        for (const subpass of subpasses) {
+            const resolvePairs = subpass.resolvePairs;
+            for (const resolve of resolvePairs) {
+                callback(resolve);
+            }
+        }
+    }
+
+    private _getOrCreateDeviceTex (resName: string): DeviceTexture {
+        let resTex = context.deviceTextures.get(resName);
+        if (!resTex) {
+            this.visitResource(resName);
+            resTex = context.deviceTextures.get(resName)!;
+        } else {
+            const resGraph = context.resourceGraph;
+            const resId = resGraph.vertex(resName);
+            const resFbo = resGraph.object(resId);
+            if (resTex.framebuffer && resFbo instanceof Framebuffer && resTex.framebuffer !== resFbo) {
+                resTex.framebuffer = resFbo;
+            } else if (resTex.texture) {
+                const desc = resGraph.getDesc(resId);
+                if (resTex.texture.width !== desc.width || resTex.texture.height !== desc.height) {
+                    resTex.texture.resize(desc.width, desc.height);
+                }
+            }
+        }
+        return resTex;
+    }
+
     constructor (rasterID: number, rasterPass: RasterPass) {
         this._rasterID = rasterID;
         this._rasterPass = rasterPass;
         const device = context.device;
         this._layoutName = context.renderGraph.getLayout(rasterID);
         this._passID = cclegacy.rendering.getPassID(this._layoutName);
+        // resolve msaa
+        this._traversalResolves((resolvePair: ResolvePair) => {
+            this._getOrCreateDeviceTex(resolvePair.target);
+        });
         const depAtt = new DepthStencilAttachment();
         depAtt.format = Format.DEPTH_STENCIL;
         const colors: ColorAttachment[] = [];
@@ -761,23 +816,7 @@ class DeviceRenderPass implements RecordingInterface {
         let swapchain: Swapchain | null = null;
         let framebuffer: Framebuffer | null = null;
         for (const [resName, rasterV] of rasterPass.rasterViews) {
-            let resTex = context.deviceTextures.get(resName);
-            if (!resTex) {
-                this.visitResource(resName);
-                resTex = context.deviceTextures.get(resName)!;
-            } else {
-                const resGraph = context.resourceGraph;
-                const resId = resGraph.vertex(resName);
-                const resFbo = resGraph.object(resId);
-                if (resTex.framebuffer && resFbo instanceof Framebuffer && resTex.framebuffer !== resFbo) {
-                    resTex.framebuffer = resFbo;
-                } else if (resTex.texture) {
-                    const desc = resGraph.getDesc(resId);
-                    if (resTex.texture.width !== desc.width || resTex.texture.height !== desc.height) {
-                        resTex.texture.resize(desc.width, desc.height);
-                    }
-                }
-            }
+            const resTex = this._getOrCreateDeviceTex(resName);
             if (!swapchain) swapchain = resTex.swapchain;
             if (!framebuffer) framebuffer = resTex.framebuffer;
             if (rasterV.attachmentType === AttachmentType.RENDER_TARGET) {
@@ -799,6 +838,7 @@ class DeviceRenderPass implements RecordingInterface {
                 depAtt.depthStoreOp = rasterV.storeOp;
                 depAtt.stencilStoreOp = rasterV.storeOp;
                 depAtt.depthLoadOp = rasterV.loadOp;
+                depAtt.sampleCount = resTex.description!.sampleCount;
                 depAtt.stencilLoadOp = rasterV.loadOp;
                 depAtt.barrier = device.getGeneralBarrier(new GeneralBarrierInfo(
                     rasterV.loadOp === LoadOp.LOAD ? AccessFlagBit.DEPTH_STENCIL_ATTACHMENT_WRITE : AccessFlagBit.NONE,
@@ -889,25 +929,6 @@ class DeviceRenderPass implements RecordingInterface {
         }
     }
 
-    protected _showProfiler (rect: Rect): void {
-        const profiler = context.pipeline.profiler!;
-        if (!profiler || !profiler.enabled) {
-            return;
-        }
-        const profilerDesc = context.profilerDescriptorSet;
-        const renderPass = this._renderPass;
-        const cmdBuff = context.commandBuffer;
-        const submodel = profiler.subModels[0];
-        const pass = submodel.passes[0];
-        const ia = submodel.inputAssembler;
-        profilerViewport.width = rect.width;
-        profilerViewport.height = rect.height;
-        cmdBuff.setViewport(profilerViewport);
-        cmdBuff.setScissor(rect);
-        cmdBuff.bindDescriptorSet(SetIndex.GLOBAL, profilerDesc);
-        recordCommand(cmdBuff, renderPass, pass, submodel.descriptorSet, submodel.shaders[0], ia);
-    }
-
     beginPass (): void {
         const tex = this.framebuffer.colorTextures[0]!;
         this._applyViewport(tex);
@@ -949,14 +970,20 @@ class DeviceRenderPass implements RecordingInterface {
         for (const queue of this._deviceQueues.values()) {
             queue.record();
         }
-        if (this._rasterPass.showStatistics) {
-            this._showProfiler(renderPassArea);
-        }
         this.endPass();
     }
 
     postRecord (): void {
-        // nothing to do
+        this._traversalResolves((resolve) => {
+            const cmdBuff = context.commandBuffer;
+            const sourceTex = this._getOrCreateDeviceTex(resolve.source).getGPUTexture();
+            const targetTex = this._getOrCreateDeviceTex(resolve.target).getGPUTexture();
+            textureBlit.srcExtent.width = sourceTex.width;
+            textureBlit.srcExtent.height = sourceTex.height;
+            textureBlit.dstExtent.width = targetTex.width;
+            textureBlit.dstExtent.height = targetTex.height;
+            cmdBuff.blitTexture(sourceTex, targetTex, [textureBlit], Filter.LINEAR);
+        });
     }
 
     private _processRenderLayout (pass: RasterPass): void {
@@ -1155,7 +1182,7 @@ class DeviceRenderScene implements RecordingInterface {
     get sceneID (): number { return this._sceneID; }
     get camera (): Camera | null { return this._camera; }
     preRecord (): void {
-        if (this._blit) {
+        if (this._blit && this._blit.blitType === BlitType.FULLSCREEN_QUAD) {
             this._currentQueue.createBlitDesc(this._blit);
             this._currentQueue.blitDesc!.update();
         }
@@ -1171,10 +1198,38 @@ class DeviceRenderScene implements RecordingInterface {
         this._blit = blit;
         this._sceneID = sceneID;
         this._renderPass = queue.devicePass.renderPass;
-        const camera = scene && scene.camera ? scene.camera : null;
+        const camera = scene && scene.camera ? scene.camera : blit && blit.camera ? blit.camera : null;
         if (camera) {
             this._scene = camera.scene;
             this._camera = camera;
+        }
+    }
+
+    protected _record3D (): void {
+        const blit = this._blit!;
+        const device = context.device;
+        const cmdBuff = context.commandBuffer;
+        for (const model of blit.models) {
+            for (const subModel of model.subModels) {
+                const inputAssembler = subModel.inputAssembler;
+                const passCount = subModel.passes.length;
+                for (let passId = 0; passId < passCount; ++passId) {
+                    const pass = subModel.passes[passId];
+                    const shader = subModel.shaders[passId];
+                    const pso = PipelineStateManager.getOrCreatePipelineState(
+                        device,
+                        pass,
+                        shader,
+                        this._renderPass,
+                        inputAssembler,
+                    );
+                    cmdBuff.bindPipelineState(pso);
+                    cmdBuff.bindDescriptorSet(SetIndex.MATERIAL, pass.descriptorSet);
+                    cmdBuff.bindDescriptorSet(SetIndex.LOCAL, subModel.descriptorSet);
+                    cmdBuff.bindInputAssembler(inputAssembler);
+                    cmdBuff.draw(inputAssembler);
+                }
+            }
         }
     }
 
@@ -1201,6 +1256,25 @@ class DeviceRenderScene implements RecordingInterface {
         }
     }
 
+    protected _showProfiler (): void {
+        const rect = renderPassArea;
+        const profiler = context.pipeline.profiler!;
+        if (!profiler || !profiler.enabled || !context.passShowStatistics) {
+            return;
+        }
+        const profilerDesc = context.profilerDescriptorSet;
+        const renderPass = this._renderPass;
+        const cmdBuff = context.commandBuffer;
+        const submodel = profiler.subModels[0];
+        const pass = submodel.passes[0];
+        const ia = submodel.inputAssembler;
+        profilerViewport.width = rect.width;
+        profilerViewport.height = rect.height;
+        cmdBuff.setViewport(profilerViewport);
+        cmdBuff.setScissor(rect);
+        cmdBuff.bindDescriptorSet(SetIndex.GLOBAL, profilerDesc);
+        recordCommand(cmdBuff, renderPass, pass, submodel.descriptorSet, submodel.shaders[0], ia);
+    }
     private _recordBlit (): void {
         if (!this.blit) { return; }
 
@@ -1226,12 +1300,15 @@ class DeviceRenderScene implements RecordingInterface {
         const rasterId = devicePass.rasterID;
         const passRenderData = context.renderGraph.getData(rasterId);
         const sceneId = this.sceneID;
-        // CCGlobal
+        // global
+        this._updateGlobal(context.renderGraph.globalRenderData, sceneId);
+        // pass
         this._updateGlobal(passRenderData, sceneId);
-        // CCCamera, CCShadow, CCCSM
+        // queue
         const queueId = this._currentQueue.queueId;
         const queueRenderData = context.renderGraph.getData(queueId)!;
         this._updateGlobal(queueRenderData, sceneId);
+        // scene
         const sceneRenderData = context.renderGraph.getData(sceneId)!;
         if (sceneRenderData) this._updateGlobal(sceneRenderData, sceneId);
         devicePass.processRenderLayout();
@@ -1267,7 +1344,22 @@ class DeviceRenderScene implements RecordingInterface {
 
         // Currently processing blit and camera first
         if (this.blit) {
-            this._recordBlit();
+            switch (this.blit.blitType) {
+            case BlitType.FULLSCREEN_QUAD:
+                this._recordBlit();
+                break;
+            case BlitType.DRAW_2D:
+                this._recordUI();
+                break;
+            case BlitType.DRAW_PROFILE:
+                this._showProfiler();
+                break;
+            case BlitType.DRAW_3D:
+                this._record3D();
+                break;
+            default:
+                break;
+            }
             return;
         }
         const rqQuery = sceneCulling.renderQueueQueryIndex.get(this.sceneID)!;
@@ -1283,9 +1375,6 @@ class DeviceRenderScene implements RecordingInterface {
                 context.commandBuffer,
                 context.pipeline.pipelineSceneData,
             );
-        }
-        if (graphSceneData.flags & SceneFlags.UI) {
-            this._recordUI();
         }
     }
 }
@@ -1522,6 +1611,7 @@ class ExecutorContext {
         this.pools.reset();
         this.cullCamera = null;
         this.lightResource.clear();
+        this.passShowStatistics = false;
     }
     resize (width: number, height: number): void {
         this.width = width;
@@ -1548,6 +1638,7 @@ class ExecutorContext {
     cullCamera;
     passDescriptorSet: DescriptorSet | null;
     profilerDescriptorSet: DescriptorSet;
+    passShowStatistics: boolean = false;
 }
 
 export class Executor {
@@ -1741,6 +1832,7 @@ class PreRenderVisitor extends BaseRenderVisitor implements RenderGraphVisitor {
         this.currPass = new DeviceComputePass(computeInfo);
         this.currPass.preRecord();
         this.currPass.record();
+        this.currPass.postRecord();
     }
     copy (value: CopyPass): void {
         if (value.uploadPairs.length) {
@@ -1838,7 +1930,9 @@ class PostRenderVisitor extends BaseRenderVisitor implements RenderGraphVisitor 
         const currPass = devicePasses.get(passHash);
         if (!currPass) return;
         this.currPass = currPass;
+        context.passShowStatistics = pass.showStatistics;
         this.currPass.record();
+        this.currPass.postRecord();
     }
     rasterSubpass (value: RasterSubpass): void {
         // do nothing

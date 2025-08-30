@@ -30,6 +30,7 @@
 #pragma once
 // clang-format off
 // IWYU pragma: begin_exports
+#include "cocos/renderer/pipeline/custom/CustomFwd.h"
 #include "cocos/renderer/pipeline/custom/NativeFwd.h"
 // IWYU pragma: end_exports
 
@@ -47,6 +48,7 @@ template <class T>
 using Array4 = std::array<T, 4>;
 
 struct RenderGraphVisitorContext;
+struct FrameGraphDispatcher;
 
 } // namespace render
 
@@ -83,10 +85,6 @@ struct UniformBlockResource;
 struct ProgramResource;
 struct LayoutGraphNodeResource;
 struct QuadResource;
-
-enum class ResourceType : uint8_t;
-
-struct SceneResource;
 struct FrustumCullingKey;
 struct FrustumCullingID;
 struct FrustumCulling;
@@ -99,6 +97,10 @@ struct NativeRenderQueueQuery;
 struct LightBoundsCullingResult;
 struct SceneCulling;
 struct LightResource;
+struct DescriptorSetKey;
+struct DescriptorSetContext;
+struct TextureWithAccessFlags;
+struct DeviceRenderData;
 struct NativeRenderContext;
 class NativeProgramLibrary;
 struct PipelineCustomization;
@@ -138,6 +140,11 @@ struct hash<cc::render::LightBoundsCullingKey> {
 template <>
 struct hash<cc::render::NativeRenderQueueKey> {
     hash_t operator()(const cc::render::NativeRenderQueueKey& val) const noexcept;
+};
+
+template <>
+struct hash<cc::render::DescriptorSetKey> {
+    hash_t operator()(const cc::render::DescriptorSetKey& val) const noexcept;
 };
 
 } // namespace ccstd

@@ -11,6 +11,7 @@ module.exports = {
         preview: {
             header: '预览',
             resetCameraView: '复位摄像机视图',
+            viewToggle: '切换 2D/3D 视图',
         },
         spine: {
             skin: '皮肤',
@@ -425,8 +426,8 @@ module.exports = {
                 },
             },
             animationBakeRate: {
-                name: '动画烘焙速率',
-                title: '指定动画烘焙速率，单位为帧每秒（FPS）',
+                name: '动画烘焙采样率',
+                title: '指定动画烘焙每秒采集多少次数据，单位为帧每秒（FPS）',
                 auto: '自动',
             },
             promoteSingleRootNode: {

@@ -394,6 +394,38 @@ ClearView::ClearView(ClearView const& rhs, const allocator_type& alloc)
   clearFlags(rhs.clearFlags),
   clearColor(rhs.clearColor) {}
 
+Blit::Blit(const allocator_type& alloc) noexcept
+: models(alloc) {}
+
+Blit::Blit(IntrusivePtr<Material> materialIn, uint32_t passIDIn, SceneFlags sceneFlagsIn, const scene::Camera* cameraIn, BlitType blitTypeIn, const allocator_type& alloc) noexcept
+: material(std::move(materialIn)),
+  passID(passIDIn),
+  sceneFlags(sceneFlagsIn),
+  camera(cameraIn),
+  blitType(blitTypeIn),
+  models(alloc) {}
+
+Blit::Blit(const scene::Camera* cameraIn, BlitType blitTypeIn, ccstd::pmr::vector<IntrusivePtr<scene::Model>> modelsIn, const allocator_type& alloc)
+: camera(cameraIn),
+  blitType(blitTypeIn),
+  models(std::move(modelsIn), alloc) {}
+
+Blit::Blit(Blit&& rhs, const allocator_type& alloc)
+: material(std::move(rhs.material)),
+  passID(rhs.passID),
+  sceneFlags(rhs.sceneFlags),
+  camera(rhs.camera),
+  blitType(rhs.blitType),
+  models(std::move(rhs.models), alloc) {}
+
+Blit::Blit(Blit const& rhs, const allocator_type& alloc)
+: material(rhs.material),
+  passID(rhs.passID),
+  sceneFlags(rhs.sceneFlags),
+  camera(rhs.camera),
+  blitType(rhs.blitType),
+  models(rhs.models, alloc) {}
+
 RenderData::RenderData(const allocator_type& alloc) noexcept
 : constants(alloc),
   buffers(alloc),
@@ -430,7 +462,8 @@ RenderGraph::RenderGraph(const allocator_type& alloc) noexcept
   clearViews(alloc),
   viewports(alloc),
   index(alloc),
-  sortedVertices(alloc) {}
+  sortedVertices(alloc),
+  globalRenderData(alloc) {}
 
 RenderGraph::RenderGraph(RenderGraph&& rhs, const allocator_type& alloc)
 : objects(std::move(rhs.objects), alloc),
@@ -454,7 +487,8 @@ RenderGraph::RenderGraph(RenderGraph&& rhs, const allocator_type& alloc)
   clearViews(std::move(rhs.clearViews), alloc),
   viewports(std::move(rhs.viewports), alloc),
   index(std::move(rhs.index), alloc),
-  sortedVertices(std::move(rhs.sortedVertices), alloc) {}
+  sortedVertices(std::move(rhs.sortedVertices), alloc),
+  globalRenderData(std::move(rhs.globalRenderData), alloc) {}
 
 // ContinuousContainer
 void RenderGraph::reserve(vertices_size_type sz) {

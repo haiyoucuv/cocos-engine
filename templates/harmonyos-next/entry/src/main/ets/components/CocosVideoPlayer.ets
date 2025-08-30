@@ -22,7 +22,7 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
  ****************************************************************************/
-import { PortProxy } from '../common/PortProxy';
+import { WorkerPort } from '../common/WorkerPort';
 
 enum EventType {
   PLAYING = 0,
@@ -76,7 +76,7 @@ export class VideoInfo {
 @Component
 export struct CocosVideoPlayer {
   @ObjectLink videoInfo: VideoInfo;
-  public workPort: PortProxy | null = null;
+  public workPort: WorkerPort | null = null;
 
   build() {
     Video({
@@ -101,11 +101,19 @@ export struct CocosVideoPlayer {
           videoEvent: EventType.PAUSED as EventType
         } as param);
       })
+      .onStop(()=>{
+        this.workPort?.postMessage("onVideoEvent", {
+          videoTag: this.videoInfo.viewTag,
+          videoEvent: EventType.STOPPED
+        } as param);
+      })
       .onFinish(() => {
         this.workPort?.postMessage("onVideoEvent", {
           videoTag: this.videoInfo.viewTag,
           videoEvent: EventType.COMPLETED
         } as param);
+        //make it playable again.
+        this.videoInfo.controller.setCurrentTime(0, SeekMode.Accurate);
       })
       .onPrepared((event): void => {
         this.videoInfo.isPreparedStart && this.videoInfo.controller.start();
