@@ -137,6 +137,8 @@ import {
     bool,
     getDescriptorSetDataFromLayout,
     getRenderArea,
+    RenderPassMergeInfo,
+    rpMergeInfos,
     updateGlobalDescBinding,
 } from './define';
 import { LightResource, SceneCulling } from './scene-culling';
@@ -756,6 +758,7 @@ class DeviceRenderPass implements RecordingInterface {
     protected _framebuffer!: Framebuffer;
     protected _clearColor: Color[] = [];
     protected _deviceQueues: Map<number, DeviceRenderQueue> = new Map();
+    protected _resolveTextures: Map<string, DeviceTexture> = new Map();
     protected _clearDepth = 1;
     protected _clearStencil = 0;
     protected _passID: number;
@@ -798,16 +801,29 @@ class DeviceRenderPass implements RecordingInterface {
         return resTex;
     }
 
+    private _applyResolve (srcName: string, srcTex: Texture | null): void {
+        if (!srcTex) {
+            return;
+        }
+        const resolvedTexes = this._resolveTextures;
+        // resolve msaa
+        this._traversalResolves((resolvePair: ResolvePair) => {
+            const resolvedTex = this._getOrCreateDeviceTex(resolvePair.target);
+            resolvedTexes.set(resolvePair.source, resolvedTex);
+        });
+        const currResolved = resolvedTexes.get(srcName);
+        if (currResolved) {
+            const gpuTex = (srcTex as any).gpuTexture;
+            gpuTex.resolveTex = (currResolved.getGPUTexture() as any).gpuTexture;
+        }
+    }
+
     constructor (rasterID: number, rasterPass: RasterPass) {
         this._rasterID = rasterID;
         this._rasterPass = rasterPass;
         const device = context.device;
         this._layoutName = context.renderGraph.getLayout(rasterID);
         this._passID = cclegacy.rendering.getPassID(this._layoutName);
-        // resolve msaa
-        this._traversalResolves((resolvePair: ResolvePair) => {
-            this._getOrCreateDeviceTex(resolvePair.target);
-        });
         const depAtt = new DepthStencilAttachment();
         depAtt.format = Format.DEPTH_STENCIL;
         const colors: ColorAttachment[] = [];
@@ -819,6 +835,7 @@ class DeviceRenderPass implements RecordingInterface {
             const resTex = this._getOrCreateDeviceTex(resName);
             if (!swapchain) swapchain = resTex.swapchain;
             if (!framebuffer) framebuffer = resTex.framebuffer;
+            const isLoadAttachment = rasterV.loadOp === LoadOp.LOAD;
             if (rasterV.attachmentType === AttachmentType.RENDER_TARGET) {
                 if (!resTex.swapchain && !resTex.framebuffer) colorTexs.push(resTex.texture!);
                 const colAtt = new ColorAttachment();
@@ -827,7 +844,7 @@ class DeviceRenderPass implements RecordingInterface {
                 colAtt.loadOp = rasterV.loadOp;
                 colAtt.storeOp = rasterV.storeOp;
                 colAtt.barrier = device.getGeneralBarrier(new GeneralBarrierInfo(
-                    rasterV.loadOp === LoadOp.LOAD ? AccessFlagBit.COLOR_ATTACHMENT_WRITE : AccessFlagBit.NONE,
+                    isLoadAttachment ? AccessFlagBit.COLOR_ATTACHMENT_WRITE : AccessFlagBit.NONE,
                     rasterV.storeOp === StoreOp.STORE ? AccessFlagBit.COLOR_ATTACHMENT_WRITE : AccessFlagBit.NONE,
                 ));
                 const currCol = new Color();
@@ -841,7 +858,7 @@ class DeviceRenderPass implements RecordingInterface {
                 depAtt.sampleCount = resTex.description!.sampleCount;
                 depAtt.stencilLoadOp = rasterV.loadOp;
                 depAtt.barrier = device.getGeneralBarrier(new GeneralBarrierInfo(
-                    rasterV.loadOp === LoadOp.LOAD ? AccessFlagBit.DEPTH_STENCIL_ATTACHMENT_WRITE : AccessFlagBit.NONE,
+                    isLoadAttachment ? AccessFlagBit.DEPTH_STENCIL_ATTACHMENT_WRITE : AccessFlagBit.NONE,
                     rasterV.storeOp === StoreOp.STORE ? AccessFlagBit.DEPTH_STENCIL_ATTACHMENT_WRITE : AccessFlagBit.NONE,
                 ));
                 if (!resTex.swapchain && !resTex.framebuffer) {
@@ -852,6 +869,7 @@ class DeviceRenderPass implements RecordingInterface {
                 this._clearDepth = rasterV.clearColor.x;
                 this._clearStencil = rasterV.clearColor.y;
             }
+            this._applyResolve(resName, resTex.texture);
         }
         if (colors.length === 0) {
             const colorAttachment = new ColorAttachment();
@@ -874,6 +892,7 @@ class DeviceRenderPass implements RecordingInterface {
             swapchain ? swapchain.depthStencilTexture : depthTex,
         );
     }
+    get passMergeInfo (): RenderPassMergeInfo { return rpMergeInfos.get(this._rasterPass)!; }
     get indexOfRD (): number { return this._idxOfRenderData; }
     get rasterID (): number { return this._rasterID; }
     get layoutName (): string { return this._layoutName; }
@@ -929,11 +948,23 @@ class DeviceRenderPass implements RecordingInterface {
         }
     }
 
+    bindGlobalDesc (): void {
+        const cmdBuff = context.commandBuffer;
+        if (context.passDescriptorSet) {
+            cmdBuff.bindDescriptorSet(
+                SetIndex.GLOBAL,
+                context.passDescriptorSet,
+            );
+        }
+    }
     beginPass (): void {
+        if (!this.passMergeInfo.needBeginRP) {
+            this.bindGlobalDesc();
+            return;
+        }
+        const cmdBuff = context.commandBuffer;
         const tex = this.framebuffer.colorTextures[0]!;
         this._applyViewport(tex);
-        const cmdBuff = context.commandBuffer;
-
         if (this._viewport) {
             renderPassArea.x = this._viewport.left;
             renderPassArea.y = this._viewport.top;
@@ -952,15 +983,11 @@ class DeviceRenderPass implements RecordingInterface {
             this.clearDepth,
             this.clearStencil,
         );
-        if (context.passDescriptorSet) {
-            cmdBuff.bindDescriptorSet(
-                SetIndex.GLOBAL,
-                context.passDescriptorSet,
-            );
-        }
+        this.bindGlobalDesc();
     }
 
     endPass (): void {
+        if (!this.passMergeInfo.needEndRP) return;
         const cmdBuff = context.commandBuffer;
         cmdBuff.endRenderPass();
     }
@@ -973,18 +1000,7 @@ class DeviceRenderPass implements RecordingInterface {
         this.endPass();
     }
 
-    postRecord (): void {
-        this._traversalResolves((resolve) => {
-            const cmdBuff = context.commandBuffer;
-            const sourceTex = this._getOrCreateDeviceTex(resolve.source).getGPUTexture();
-            const targetTex = this._getOrCreateDeviceTex(resolve.target).getGPUTexture();
-            textureBlit.srcExtent.width = sourceTex.width;
-            textureBlit.srcExtent.height = sourceTex.height;
-            textureBlit.dstExtent.width = targetTex.width;
-            textureBlit.dstExtent.height = targetTex.height;
-            cmdBuff.blitTexture(sourceTex, targetTex, [textureBlit], Filter.LINEAR);
-        });
-    }
+    postRecord (): void {}
 
     private _processRenderLayout (pass: RasterPass): void {
         for (const cv of pass.computeViews) {
@@ -1059,6 +1075,7 @@ class DeviceRenderPass implements RecordingInterface {
                     depTexture = gfxTex;
                 }
             }
+            this._applyResolve(resName, deviceTex.texture);
         }
         this._createFramebuffer(framebuffer, colTextures, depTexture);
     }
@@ -1186,8 +1203,6 @@ class DeviceRenderScene implements RecordingInterface {
             this._currentQueue.createBlitDesc(this._blit);
             this._currentQueue.blitDesc!.update();
         }
-        context.lightResource.buildLightBuffer(context.commandBuffer);
-        context.lightResource.tryUpdateRenderSceneLocalDescriptorSet(context.culling);
     }
     postRecord (): void {
         // nothing to do
@@ -1601,7 +1616,6 @@ class ExecutorContext {
         this.width = width;
         this.height = height;
         this.pools = new ExecutorPools();
-        this.blit = new BlitInfo(this);
         this.culling = new SceneCulling();
         this.passDescriptorSet = descriptorSet;
         this.profilerDescriptorSet = getDescriptorSetDataFromLayout('default')!.descriptorSet!;
@@ -1616,7 +1630,7 @@ class ExecutorContext {
     resize (width: number, height: number): void {
         this.width = width;
         this.height = height;
-        this.blit.resize(width, height);
+        if (this._blit) this._blit.resize(width, height);
     }
     readonly device: Device;
     readonly pipeline: BasicPipeline;
@@ -1629,8 +1643,12 @@ class ExecutorContext {
     readonly layoutGraph: LayoutGraphData;
     readonly root: Root;
     readonly pools: ExecutorPools;
-    readonly blit: BlitInfo;
     readonly culling: SceneCulling;
+    private _blit: BlitInfo | null = null;
+    get blit (): BlitInfo {
+        if (!this._blit) this._blit = new BlitInfo(this);
+        return this._blit;
+    }
     lightResource: LightResource = new LightResource();
     renderGraph: RenderGraph;
     width: number;
@@ -1659,8 +1677,6 @@ export class Executor {
             width,
             height,
         );
-        const programLib: WebProgramLibrary = cclegacy.rendering.programLib;
-        context.lightResource.init(programLib, device, 16);
     }
 
     resize (width: number, height: number): void {
@@ -1719,6 +1735,8 @@ export class Executor {
         context.lightResource.buildLights(culling, context.pipelineSceneData.isHDR, context.pipelineSceneData.shadows);
         this._removeDeviceResource();
         cmdBuff.begin();
+        context.lightResource.buildLightBuffer(cmdBuff);
+        context.lightResource.tryUpdateRenderSceneLocalDescriptorSet(context.culling);
         culling.uploadInstancing(cmdBuff);
         if (!this._visitor) this._visitor = new RenderVisitor();
         depthFirstSearch(this._visitor.graphView, this._visitor, this._visitor.colorMap);
